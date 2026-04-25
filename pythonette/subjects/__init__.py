@@ -1,0 +1,13 @@
+from pythonette.subjects.registry import (
+    Exercise,
+    Module,
+    Registry,
+    TestCase,
+)
+from pythonette.subjects.module_00 import MODULE_00
+from pythonette.subjects.module_01 import MODULE_01
+
+ALL_MODULES: list[Module] = [MODULE_00, MODULE_01]
+REGISTRY = Registry(ALL_MODULES)
+
+__all__ = ["Exercise", "Module", "Registry", "TestCase", "ALL_MODULES", "REGISTRY"]
