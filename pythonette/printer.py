@@ -92,7 +92,17 @@ class Printer:
         if outcome.ok:
             return Group(head)
 
-        details: list = [head, Text(f"  {outcome.reason}", style="red")]
+        reason = Text("  reason: ", style="bold red")
+        reason.append(outcome.reason, style="red")
+        details: list = [head, reason]
+        if self.verbose and outcome.result.stderr.strip():
+            details.append(
+                Panel(
+                    Text(outcome.result.stderr.rstrip(), style="red"),
+                    title="stderr",
+                    border_style="dim",
+                )
+            )
         if self.diff and outcome.case.expected_stdout is not None:
             details.append(
                 self._diff_panel(

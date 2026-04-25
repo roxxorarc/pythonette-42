@@ -13,6 +13,20 @@ class CaseOutcome:
     result: ExecResult
 
 
+def _extract_error(stderr: str) -> str | None:
+    lines = [ln for ln in stderr.splitlines() if ln.strip()]
+    if not lines:
+        return None
+    last = lines[-1]
+    for prefix in ("AssertionError:", "ImportError:", "ModuleNotFoundError:"):
+        if last.startswith(prefix):
+            msg = last[len(prefix):].strip()
+            return msg or last
+    if ": " in last and last.split(":", 1)[0].isidentifier():
+        return last
+    return None
+
+
 def run_case_with_check(
     exercise: Exercise, exercise_dir: Path, case: TestCase
 ) -> CaseOutcome:
@@ -22,20 +36,27 @@ def run_case_with_check(
         return CaseOutcome(case, False, "timed out (possible infinite loop)", result)
 
     if result.returncode != case.expected_returncode:
-        reason = (
-            f"exit code {result.returncode} (expected "
-            f"{case.expected_returncode})"
-        )
-        if result.stderr.strip():
-            reason += f"\nstderr:\n{result.stderr.strip()}"
+        err = _extract_error(result.stderr)
+        if err:
+            reason = err
+        else:
+            reason = (
+                f"exit code {result.returncode} (expected "
+                f"{case.expected_returncode})"
+            )
         return CaseOutcome(case, False, reason, result)
 
     if case.expected_stdout is not None:
         got = result.stdout.rstrip("\n")
         want = case.expected_stdout.rstrip("\n")
         if got != want:
+            reason = (
+                "stdout mismatch\n"
+                f"expected: {want!r}\n"
+                f"got: {got!r}"
+            )
             return CaseOutcome(
-                case, False, "stdout mismatch", result
+                case, False, reason, result
             )
 
     missing = [s for s in case.expected_contains if s not in result.stdout]
