@@ -1,16 +1,7 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Iterable
 
-
-@dataclass(frozen=True)
-class TestCase:
-    name: str
-    harness: str | None = None
-    stdin: str | None = None
-    expected_stdout: str | None = None
-    expected_contains: tuple[str, ...] = ()
-    expected_returncode: int = 0
-    timeout: float = 5.0
+from pythonette.checks import Check
 
 
 @dataclass(frozen=True)
@@ -19,7 +10,7 @@ class Exercise:
     id: str
     filenames: tuple[str, ...]
     authorized: tuple[str, ...] = ()
-    cases: tuple[TestCase, ...] = ()
+    checks: tuple[Check, ...] = ()
     explain: str = ""
 
     @property

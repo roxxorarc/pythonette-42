@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from pythonette.checks import CheckResult
 from pythonette.detector import Found
 
 if TYPE_CHECKING:
@@ -51,12 +52,11 @@ class Printer:
         ex = report.found.exercise
         title = f"module {ex.module_id} · {ex.id}"
 
-        rows: list = []
-        rows.append(self._style_row(report))
-        for outcome in report.cases:
-            rows.append(self._case_row(outcome))
+        rows: list = [self._style_row(report)]
+        for result in report.results:
+            rows.append(self._result_row(result))
 
-        body = Group(*rows)
+        body: Group | Panel = Group(*rows)
 
         if not report.ok and self.explain and ex.explain:
             body = Group(
@@ -83,31 +83,26 @@ class Printer:
             out.append(s.output + "\n", style="red")
         return out
 
-    def _case_row(self, outcome) -> Group:
-        head = (
-            Text("✓ ", style="green") + Text(outcome.case.name)
-            if outcome.ok
-            else Text("✗ ", style="bold red") + Text(outcome.case.name)
-        )
-        if outcome.ok:
+    def _result_row(self, result: CheckResult) -> Group:
+        if result.ok:
+            head = Text("✓ ", style="green") + Text(result.name)
             return Group(head)
 
+        head = Text("✗ ", style="bold red") + Text(result.name)
         reason = Text("  reason: ", style="bold red")
-        reason.append(outcome.reason, style="red")
+        reason.append(result.reason, style="red")
         details: list = [head, reason]
-        if self.verbose and outcome.result.stderr.strip():
+        if self.verbose and result.stderr.strip():
             details.append(
                 Panel(
-                    Text(outcome.result.stderr.rstrip(), style="red"),
+                    Text(result.stderr.rstrip(), style="red"),
                     title="stderr",
                     border_style="dim",
                 )
             )
-        if self.diff and outcome.case.expected_stdout is not None:
+        if self.diff and result.expected_stdout is not None:
             details.append(
-                self._diff_panel(
-                    outcome.case.expected_stdout, outcome.result.stdout
-                )
+                self._diff_panel(result.expected_stdout, result.stdout)
             )
         return Group(*details)
 

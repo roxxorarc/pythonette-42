@@ -1,23 +1,24 @@
 import argparse
 from dataclasses import dataclass
-from pathlib import Path
 
-from pythonette.checkers.execution import CaseOutcome, run_case_with_check
+from pythonette.checks import CheckResult
 from pythonette.checkers.style import StyleResult, check_flake8
 from pythonette.detector import Found, detect
 from pythonette.printer import Printer
-from pythonette.subjects import Exercise
 
 
 @dataclass
 class ExerciseReport:
     found: Found
     style: list[StyleResult]
-    cases: list[CaseOutcome]
+    results: list[CheckResult]
 
     @property
     def ok(self) -> bool:
-        return all(s.ok for s in self.style) and all(c.ok for c in self.cases)
+        return (
+            all(s.ok for s in self.style)
+            and all(r.ok for r in self.results)
+        )
 
 
 def run(args: argparse.Namespace) -> int:
@@ -40,7 +41,7 @@ def run(args: argparse.Namespace) -> int:
         by_exercise.setdefault((f.exercise.module_id, f.exercise.id), []).append(f)
 
     failures = 0
-    for (mid, eid), group in sorted(by_exercise.items()):
+    for _, group in sorted(by_exercise.items()):
         report = _evaluate(group)
         printer.exercise_report(report)
         if not report.ok:
@@ -51,7 +52,7 @@ def run(args: argparse.Namespace) -> int:
 
 
 def _evaluate(group: list[Found]) -> ExerciseReport:
-    exercise: Exercise = group[0].exercise
+    exercise = group[0].exercise
     exercise_dir = group[0].file.parent
 
     style: list[StyleResult] = []
@@ -60,8 +61,8 @@ def _evaluate(group: list[Found]) -> ExerciseReport:
         if path.is_file():
             style.append(check_flake8(path))
 
-    cases: list[CaseOutcome] = []
-    for case in exercise.cases:
-        cases.append(run_case_with_check(exercise, exercise_dir, case))
+    results: list[CheckResult] = [
+        check.run(exercise_dir, exercise) for check in exercise.checks
+    ]
 
-    return ExerciseReport(found=group[0], style=style, cases=cases)
+    return ExerciseReport(found=group[0], style=style, results=results)
