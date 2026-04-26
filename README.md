@@ -1,3 +1,5 @@
+# WARNING: Please note that this project is in early development and may not be fully functional, if you notice any issues with the tests (e.g. false positives, false negatives or any other problems), please report them by opening an issue on GitHub with a detailed description. Thank you for your understanding and support !
+
 # 🐍 pythonette
 
 A test automation framework for the 42 Python modules.
