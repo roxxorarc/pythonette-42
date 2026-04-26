@@ -153,6 +153,33 @@ class StructureCheck(Check):
         return CheckResult(self.name, True)
 
 
+_LANGUAGE_FEATURES: frozenset[str] = frozenset({
+    "super",
+    "BaseException", "Exception",
+    "ArithmeticError", "ZeroDivisionError", "OverflowError",
+    "FloatingPointError",
+    "AssertionError", "AttributeError",
+    "ImportError", "ModuleNotFoundError",
+    "LookupError", "IndexError", "KeyError",
+    "NameError", "UnboundLocalError",
+    "OSError", "IOError",
+    "FileNotFoundError", "FileExistsError", "PermissionError",
+    "IsADirectoryError", "NotADirectoryError",
+    "TimeoutError", "InterruptedError", "BlockingIOError",
+    "ConnectionError", "ConnectionResetError",
+    "ConnectionAbortedError", "ConnectionRefusedError",
+    "RuntimeError", "NotImplementedError", "RecursionError",
+    "StopIteration", "StopAsyncIteration",
+    "SyntaxError", "IndentationError", "TabError",
+    "SystemError", "TypeError", "ValueError", "UnicodeError",
+    "UnicodeDecodeError", "UnicodeEncodeError",
+    "MemoryError",
+    "Warning", "UserWarning", "DeprecationWarning",
+    "PendingDeprecationWarning", "RuntimeWarning",
+    "SyntaxWarning", "FutureWarning",
+})
+
+
 @dataclass(frozen=True)
 class AuthorizedCheck(Check):
     file: str
@@ -194,7 +221,7 @@ class AuthorizedCheck(Check):
                 if a.kwarg:
                     params.add(a.kwarg.arg)
         authorized = set(self.authorized)
-        allowed = local | authorized | params
+        allowed = local | authorized | params | _LANGUAGE_FEATURES
 
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
