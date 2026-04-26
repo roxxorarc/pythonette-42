@@ -181,8 +181,20 @@ class AuthorizedCheck(Check):
 
         DEF = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
         local = {n.name for n in ast.walk(tree) if isinstance(n, DEF)}
+        params: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                a = node.args
+                for arg in (
+                    a.posonlyargs + a.args + a.kwonlyargs
+                ):
+                    params.add(arg.arg)
+                if a.vararg:
+                    params.add(a.vararg.arg)
+                if a.kwarg:
+                    params.add(a.kwarg.arg)
         authorized = set(self.authorized)
-        allowed = local | authorized
+        allowed = local | authorized | params
 
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
