@@ -241,7 +241,7 @@ class AuthorizedCheck(Check):
                         self.name, False,
                         f"forbidden call {node.func.id}() "
                         f"at line {node.lineno} "
-                        f"(authorized: {sorted(authorized)})",
+                        f"(authorized: {', '.join(sorted(authorized))})",
                     )
 
         return CheckResult(self.name, True)
