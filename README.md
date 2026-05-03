@@ -8,17 +8,30 @@ A test automation framework for the 42 Python modules.
 
 ## 📦 Install
 
+### One-liner (recommended)
+
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/roxxorarc/pythonette-42/main/install.sh)"
+```
+
+### Manual
+
 ```sh
 git clone https://github.com/roxxorarc/pythonette-42.git
 cd pythonette-42
 ./install.sh
 ```
 
-If `~/.local/bin` is not on your `PATH`, the installer prints a one-line
-snippet to add to your shell rc.
+### After install
 
-Requirements: Python 3.10 or newer. That is the only thing the host
-machine has to provide.
+If `~/.local/bin` is not already on your `PATH`, the installer adds it
+to `~/.zshrc` automatically. Apply it to your current session with:
+
+```sh
+source ~/.zshrc
+```
+
+Requirements: Python 3.10 or newer and `git`. No admin privileges required.
 
 ## 🚀 Usage
 

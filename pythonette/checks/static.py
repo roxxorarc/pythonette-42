@@ -50,9 +50,9 @@ class StructureCheck(Check):
             return f"structure: {self.label}"
         bits = []
         if self.functions:
-            bits.append(f"functions={list(self.functions)}")
+            bits.append(f"functions={', '.join(self.functions)}")
         if self.classes:
-            bits.append(f"classes={list(self.classes)}")
+            bits.append(f"classes={', '.join(self.classes)}")
         if self.require_main_guard:
             bits.append("__main__ guard")
         rules = ", ".join(bits) if bits else "no top-level extras"
