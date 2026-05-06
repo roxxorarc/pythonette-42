@@ -1,4 +1,19 @@
-from pythonette.checks import ImportCheck, InlineCheck
+from pythonette.checks import (
+    AssertCheck,
+    Contains,
+    ContainsAll,
+    Eq,
+    FilesExistCheck,
+    HasAttr,
+    ImportCheck,
+    ImportStyleCheck,
+    LacksAttr,
+    NoForbiddenCallsCheck,
+    NoSysPathMutationCheck,
+    Raises,
+    RunCheck,
+    Truthy,
+)
 from pythonette.subjects.registry import Exercise, Module
 
 
@@ -33,78 +48,27 @@ def _imports_checks(scripts: tuple[str, ...]) -> tuple[ImportCheck, ...]:
 # Shared check helpers
 # ---------------------------------------------------------------------------
 
-def _no_eval_exec_check(scope_files: tuple[str, ...]) -> InlineCheck:
-    return InlineCheck(
-        label="no eval()/exec() and no sys.path mutation",
-        code=(
-            "import ast\n"
-            "from pathlib import Path\n"
-            f"scope = {list(scope_files)!r}\n"
-            "files = []\n"
-            "for entry in scope:\n"
-            "    p = Path(entry)\n"
-            "    if not p.exists():\n"
-            "        continue\n"
-            "    if p.is_dir():\n"
-            "        files += [\n"
-            "            q for q in p.rglob('*.py')\n"
-            "            if '__pycache__' not in q.parts\n"
-            "        ]\n"
-            "    elif p.suffix == '.py':\n"
-            "        files.append(p)\n"
-            "bad = []\n"
-            "for f in files:\n"
-            "    tree = ast.parse(f.read_text(encoding='utf-8'),\n"
-            "                     filename=str(f))\n"
-            "    for n in ast.walk(tree):\n"
-            "        if isinstance(n, ast.Call) and isinstance(n.func, "
-            "ast.Name):\n"
-            "            if n.func.id in ('eval', 'exec'):\n"
-            "                bad.append(\n"
-            "                    (str(f), n.lineno, f'{n.func.id}() call')\n"
-            "                )\n"
-            "        if isinstance(n, ast.Attribute) and n.attr == 'path':\n"
-            "            v = n.value\n"
-            "            if isinstance(v, ast.Name) and v.id == 'sys':\n"
-            "                # Reading sys.path is fine; mutating is not.\n"
-            "                # Detect attribute store / call on it.\n"
-            "                pass\n"
-            "    # Detect direct sys.path.append/insert/extend/remove etc.\n"
-            "    for n in ast.walk(tree):\n"
-            "        if (\n"
-            "            isinstance(n, ast.Call)\n"
-            "            and isinstance(n.func, ast.Attribute)\n"
-            "            and isinstance(n.func.value, ast.Attribute)\n"
-            "            and n.func.value.attr == 'path'\n"
-            "            and isinstance(n.func.value.value, ast.Name)\n"
-            "            and n.func.value.value.id == 'sys'\n"
-            "        ):\n"
-            "            bad.append(\n"
-            "                (str(f), n.lineno,\n"
-            "                 f'sys.path.{n.func.attr}() forbidden')\n"
-            "            )\n"
-            "assert not bad, (\n"
-            "    'forbidden constructs:\\n'\n"
-            "    + '\\n'.join(f'  {x[0]}:{x[1]} -> {x[2]}' for x in bad)\n"
-            ")\n"
-            "print('OK')\n"
+def _hygiene_checks(
+    scope_files: tuple[str, ...],
+) -> tuple[NoForbiddenCallsCheck, NoSysPathMutationCheck]:
+    """Subject hygiene: no eval()/exec(), no sys.path mutation."""
+    return (
+        NoForbiddenCallsCheck(
+            label="no eval() / exec() calls",
+            scope=scope_files,
+            forbidden=("eval", "exec"),
+        ),
+        NoSysPathMutationCheck(
+            label="no sys.path mutation",
+            scope=scope_files,
         ),
     )
 
 
-def _structure_check(required: tuple[str, ...]) -> InlineCheck:
-    return InlineCheck(
+def _structure_check(required: tuple[str, ...]) -> FilesExistCheck:
+    return FilesExistCheck(
         label="required project files exist on disk",
-        code=(
-            "from pathlib import Path\n"
-            f"required = {list(required)!r}\n"
-            "missing = [r for r in required if not Path(r).exists()]\n"
-            "assert not missing, (\n"
-            "    'missing required project file(s):\\n'\n"
-            "    + '\\n'.join('  ' + m for m in missing)\n"
-            ")\n"
-            "print('OK')\n"
-        ),
+        paths=required,
     )
 
 
@@ -115,42 +79,16 @@ def _runpy_check(
     contains: tuple[str, ...] = (),
     allow_exception: bool = False,
     timeout: float = 5.0,
-) -> InlineCheck:
-    """Run `file` as __main__, capture stdout+stderr together, assert each
-    needle in `contains` appears in the combined output. If allow_exception,
-    a raised exception is swallowed (its traceback ends up in stderr and is
-    therefore part of the combined output)."""
-    code = (
-        "import runpy, sys, io\n"
-        "from contextlib import redirect_stdout, redirect_stderr\n"
-        "out = io.StringIO()\n"
-        "err = io.StringIO()\n"
-        "try:\n"
-        "    with redirect_stdout(out), redirect_stderr(err):\n"
-        f"        runpy.run_path({file!r}, run_name='__main__')\n"
-        "except SystemExit:\n"
-        "    pass\n"
+) -> RunCheck:
+    """Run `file` as __main__, asserting each needle appears in stdout
+    or stderr (the combined output)."""
+    return RunCheck(
+        label=label,
+        file=file,
+        combined_contains=contains,
+        allow_exception=allow_exception,
+        timeout=timeout,
     )
-    if allow_exception:
-        code += (
-            "except BaseException as exc:\n"
-            "    import traceback\n"
-            "    traceback.print_exception(\n"
-            "        type(exc), exc, exc.__traceback__, file=err\n"
-            "    )\n"
-        )
-    code += (
-        "combined = out.getvalue() + '\\n' + err.getvalue()\n"
-    )
-    for needle in contains:
-        code += (
-            f"assert {needle!r} in combined, (\n"
-            f"    'missing in output: ' + {needle!r} + '\\n--- output ---\\n'\n"
-            "    + combined\n"
-            ")\n"
-        )
-    code += "print('OK')\n"
-    return InlineCheck(label=label, code=code, timeout=timeout)
 
 
 # ---------------------------------------------------------------------------
@@ -173,45 +111,41 @@ _EX0 = Exercise(
             "alchemy/elements.py",
         )),
         *_imports_checks(_ALEMBIC_FILES),
-        _no_eval_exec_check(_ALEMBIC_FILES + _SUPPORT),
-        InlineCheck(
+        *_hygiene_checks(_ALEMBIC_FILES + _SUPPORT),
+        AssertCheck(
             label="elements.py exposes create_fire / create_water",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "import elements\n"
-                "assert elements.create_fire() == 'Fire element created'\n"
-                "assert elements.create_water() == 'Water element created'\n"
-                "print('OK')\n"
+            setup="import elements",
+            assertions=(
+                Eq("elements.create_fire()", "Fire element created"),
+                Eq("elements.create_water()", "Water element created"),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="alchemy/elements.py exposes create_earth / create_air",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from alchemy import elements as alch_el\n"
-                "assert alch_el.create_earth() == 'Earth element created'\n"
-                "assert alch_el.create_air() == 'Air element created'\n"
-                "print('OK')\n"
+            setup="from alchemy import elements as alch_el",
+            assertions=(
+                Eq("alch_el.create_earth()", "Earth element created"),
+                Eq("alch_el.create_air()", "Air element created"),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label=(
                 "alchemy package hides create_earth at top level "
                 "(see ft_alembic_4)"
             ),
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "import alchemy\n"
-                "assert hasattr(alchemy, 'create_air'), (\n"
-                "    'alchemy must expose create_air at package level'\n"
-                ")\n"
-                "assert not hasattr(alchemy, 'create_earth'), (\n"
-                "    'alchemy must NOT expose create_earth at package level'\n"
-                ")\n"
-                "print('OK')\n"
+            setup="import alchemy",
+            assertions=(
+                HasAttr(
+                    "alchemy", "create_air",
+                    message="alchemy must expose create_air at package level",
+                ),
+                LacksAttr(
+                    "alchemy", "create_earth",
+                    message=(
+                        "alchemy must NOT expose create_earth at "
+                        "package level"
+                    ),
+                ),
             ),
         ),
         _runpy_check(
@@ -273,34 +207,41 @@ _EX1 = Exercise(
     checks=(
         _structure_check(("alchemy/potions.py",)),
         *_imports_checks(_DISTILLATION_FILES),
-        _no_eval_exec_check(_DISTILLATION_FILES + _SUPPORT),
-        InlineCheck(
+        *_hygiene_checks(_DISTILLATION_FILES + _SUPPORT),
+        AssertCheck(
             label="alchemy/potions.py: healing_potion + strength_potion",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from alchemy import potions\n"
-                "h = potions.healing_potion()\n"
-                "s = potions.strength_potion()\n"
-                "assert 'Healing potion' in h and 'Earth element created' "
-                "in h and 'Air element created' in h, h\n"
-                "assert 'Strength potion' in s and 'Fire element created' "
-                "in s and 'Water element created' in s, s\n"
-                "print('OK')\n"
+            setup="from alchemy import potions",
+            assertions=(
+                ContainsAll(
+                    "potions.healing_potion()",
+                    (
+                        "Healing potion",
+                        "Earth element created",
+                        "Air element created",
+                    ),
+                ),
+                ContainsAll(
+                    "potions.strength_potion()",
+                    (
+                        "Strength potion",
+                        "Fire element created",
+                        "Water element created",
+                    ),
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="alchemy.heal is exposed as alias of healing_potion",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "import alchemy\n"
-                "assert hasattr(alchemy, 'heal'), (\n"
-                "    'alchemy.__init__.py must expose heal as a package alias'\n"
-                ")\n"
-                "result = alchemy.heal()\n"
-                "assert 'Healing potion' in result, result\n"
-                "print('OK')\n"
+            setup="import alchemy",
+            assertions=(
+                HasAttr(
+                    "alchemy", "heal",
+                    message=(
+                        "alchemy.__init__.py must expose heal as a "
+                        "package alias"
+                    ),
+                ),
+                Contains("alchemy.heal()", "Healing potion"),
             ),
         ),
         _runpy_check(
@@ -345,34 +286,14 @@ _TRANSMUTATION_FILES = (
 )
 
 
-_RECIPES_IMPORT_STYLE_CHECK = InlineCheck(
+_RECIPES_IMPORT_STYLE_CHECK = ImportStyleCheck(
     label=(
         "alchemy/transmutation/recipes.py uses both an absolute "
         "and a relative import"
     ),
-    code=(
-        "import ast\n"
-        "from pathlib import Path\n"
-        "src = Path('alchemy/transmutation/recipes.py').read_text(\n"
-        "    encoding='utf-8'\n"
-        ")\n"
-        "tree = ast.parse(src, filename='alchemy/transmutation/recipes.py')\n"
-        "absolute = False\n"
-        "relative = False\n"
-        "for n in ast.walk(tree):\n"
-        "    if isinstance(n, ast.Import):\n"
-        "        absolute = True\n"
-        "    elif isinstance(n, ast.ImportFrom):\n"
-        "        if (n.level or 0) > 0:\n"
-        "            relative = True\n"
-        "        else:\n"
-        "            absolute = True\n"
-        "assert absolute and relative, (\n"
-        "    f'recipes.py must use BOTH an absolute and a relative import; '\n"
-        "    f'absolute={absolute}, relative={relative}'\n"
-        ")\n"
-        "print('OK')\n"
-    ),
+    file="alchemy/transmutation/recipes.py",
+    require_absolute=True,
+    require_relative=True,
 )
 
 
@@ -395,23 +316,21 @@ _EX2 = Exercise(
             "alchemy/transmutation/recipes.py",
         )),
         *_imports_checks(_TRANSMUTATION_FILES),
-        _no_eval_exec_check(_TRANSMUTATION_FILES + _SUPPORT),
+        *_hygiene_checks(_TRANSMUTATION_FILES + _SUPPORT),
         _RECIPES_IMPORT_STYLE_CHECK,
-        InlineCheck(
+        AssertCheck(
             label="lead_to_gold() composes air + strength + fire",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from alchemy.transmutation import recipes\n"
-                "got = recipes.lead_to_gold()\n"
-                "for needle in (\n"
-                "    'Recipe transmuting Lead to Gold',\n"
-                "    'Air element created',\n"
-                "    'Strength potion',\n"
-                "    'Fire element created',\n"
-                "):\n"
-                "    assert needle in got, (needle, got)\n"
-                "print('OK')\n"
+            setup="from alchemy.transmutation import recipes",
+            assertions=(
+                ContainsAll(
+                    "recipes.lead_to_gold()",
+                    (
+                        "Recipe transmuting Lead to Gold",
+                        "Air element created",
+                        "Strength potion",
+                        "Fire element created",
+                    ),
+                ),
             ),
         ),
         _runpy_check(
@@ -459,45 +378,45 @@ _EX3 = Exercise(
             "alchemy/grimoire/dark_validator.py",
         )),
         *_imports_checks(_KABOOM_FILES),
-        _no_eval_exec_check(_KABOOM_FILES + _SUPPORT),
-        InlineCheck(
+        *_hygiene_checks(_KABOOM_FILES + _SUPPORT),
+        AssertCheck(
             label="light_spellbook records valid + rejects invalid spells",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
+            setup=(
                 "from alchemy.grimoire.light_spellbook import (\n"
                 "    light_spell_record, light_spell_allowed_ingredients,\n"
                 ")\n"
-                "allowed = light_spell_allowed_ingredients()\n"
-                "for el in ('earth', 'air', 'fire', 'water'):\n"
-                "    assert el in [a.lower() for a in allowed], (el, allowed)\n"
+                "allowed_lower = "
+                "[a.lower() for a in light_spell_allowed_ingredients()]\n"
                 "ok = light_spell_record('Fantasy', 'Earth, wind and fire')\n"
-                "assert 'recorded' in ok.lower() and 'VALID' in ok, ok\n"
-                "ko = light_spell_record('Bogus', 'mercury and lead')\n"
-                "low = ko.lower()\n"
-                "assert ('invalid' in low or 'rejected' in low), ko\n"
-                "print('OK')\n"
+                "ko = light_spell_record('Bogus', 'mercury and lead')"
+            ),
+            assertions=(
+                ContainsAll(
+                    "allowed_lower", ("earth", "air", "fire", "water"),
+                ),
+                Contains("ok.lower()", "recorded"),
+                Contains("ok", "VALID"),
+                Truthy(
+                    "'invalid' in ko.lower() or 'rejected' in ko.lower()",
+                    message="invalid spell must mention 'invalid' or 'rejected'",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label=(
                 "dark_spellbook intentionally has a circular import "
                 "(import fails)"
             ),
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "raised = False\n"
-                "try:\n"
-                "    import alchemy.grimoire.dark_spellbook  # noqa: F401\n"
-                "except (ImportError, AttributeError):\n"
-                "    raised = True\n"
-                "assert raised, (\n"
-                "    'alchemy.grimoire.dark_spellbook must fail to import '\n"
-                "    'due to circular dependency between dark_spellbook '\n"
-                "    'and dark_validator'\n"
-                ")\n"
-                "print('OK')\n"
+            assertions=(
+                Raises(
+                    "import alchemy.grimoire.dark_spellbook  # noqa: F401",
+                    exception_types=("ImportError", "AttributeError"),
+                    message=(
+                        "alchemy.grimoire.dark_spellbook must fail to "
+                        "import due to circular dependency between "
+                        "dark_spellbook and dark_validator"
+                    ),
+                ),
             ),
         ),
         _runpy_check(

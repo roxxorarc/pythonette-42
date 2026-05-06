@@ -1,8 +1,17 @@
 from pythonette.checks import (
+    AssertCheck,
     AuthorizedCheck,
-    InlineCheck,
+    Eq,
+    FunctionTryFinallyReturnCheck,
+    FunctionTryHandlersCheck,
+    NoNodeTypesCheck,
+    NotRaises,
+    Raises,
+    RequireNodeTypesCheck,
     ScriptCheck,
     StructureCheck,
+    Subclass,
+    Truthy,
 )
 from pythonette.subjects.registry import Exercise, Module
 
@@ -30,20 +39,6 @@ def _struct_pipeline(
     )
 
 
-def _ast_helper(filename: str) -> str:
-    """Return Python source that loads filename, parses it, and exposes a
-    `_fn(name)` helper to find a top-level FunctionDef by name."""
-    return (
-        "import ast\n"
-        "from pathlib import Path\n"
-        f"src = Path({filename!r}).read_text(encoding='utf-8')\n"
-        f"tree = ast.parse(src, filename={filename!r})\n"
-        "def _fn(name):\n"
-        "    for n in ast.walk(tree):\n"
-        "        if isinstance(n, ast.FunctionDef) and n.name == name:\n"
-        "            return n\n"
-        "    return None\n"
-    )
 
 
 _EX0 = Exercise(
@@ -60,55 +55,39 @@ _EX0 = Exercise(
             "ft_first_exception.py", ("int", "print"),
             allow_method_calls=False,
         ),
-        InlineCheck(
-            label=(
-                "exception handling lives in test_temperature(), "
-                "not input_temperature()"
-            ),
-            code=(
-                _ast_helper("ft_first_exception.py")
-                + "in_fn = _fn('input_temperature')\n"
-                "test_fn = _fn('test_temperature')\n"
-                "assert in_fn is not None, 'input_temperature missing'\n"
-                "assert test_fn is not None, 'test_temperature missing'\n"
-                "assert not any(\n"
-                "    isinstance(n, ast.Try) for n in ast.walk(in_fn)\n"
-                "), (\n"
-                "    'input_temperature must not contain try/except — '\n"
-                "    'let it fail and catch in test_temperature'\n"
-                ")\n"
-                "assert any(\n"
-                "    isinstance(n, ast.Try) for n in ast.walk(test_fn)\n"
-                "), (\n"
-                "    'test_temperature must catch input_temperature '\n"
-                "    'failures with try/except'\n"
-                ")\n"
-                "print('OK')\n"
+        NoNodeTypesCheck(
+            label="input_temperature() must not contain try/except",
+            scope=("ft_first_exception.py",),
+            node_types=("Try",),
+            inside_function="input_temperature",
+            reason=(
+                "input_temperature must not contain try/except — "
+                "let it fail and catch in test_temperature"
             ),
         ),
-        InlineCheck(
+        RequireNodeTypesCheck(
+            label="test_temperature() catches with try/except",
+            scope=("ft_first_exception.py",),
+            node_types=("Try",),
+            inside_function="test_temperature",
+            reason=(
+                "test_temperature must catch input_temperature failures "
+                "with try/except"
+            ),
+        ),
+        AssertCheck(
             label="input_temperature('25') == 25",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_first_exception import input_temperature\n"
-                "got = input_temperature('25')\n"
-                "assert got == 25, f'expected 25, got {got!r}'\n"
-                "print('OK')\n"
-            ),
+            setup="from ft_first_exception import input_temperature",
+            assertions=(Eq("input_temperature('25')", 25),),
         ),
-        InlineCheck(
+        AssertCheck(
             label="input_temperature('abc') raises (caught at test level)",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_first_exception import input_temperature\n"
-                "try:\n"
-                "    input_temperature('abc')\n"
-                "except Exception:\n"
-                "    print('OK')\n"
-                "else:\n"
-                "    raise AssertionError('expected exception on abc input')\n"
+            setup="from ft_first_exception import input_temperature",
+            assertions=(
+                Raises(
+                    "input_temperature('abc')",
+                    message="expected exception on abc input",
+                ),
             ),
         ),
         ScriptCheck(
@@ -143,67 +122,47 @@ _EX1 = Exercise(
             "ft_raise_exception.py", ("int", "print"),
             allow_method_calls=False,
         ),
-        InlineCheck(
+        AssertCheck(
             label="input_temperature('25') == 25 (in range)",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_raise_exception import input_temperature\n"
-                "assert input_temperature('25') == 25\n"
-                "print('OK')\n"
-            ),
+            setup="from ft_raise_exception import input_temperature",
+            assertions=(Eq("input_temperature('25')", 25),),
         ),
-        InlineCheck(
+        AssertCheck(
             label="boundaries 0 and 40 are valid",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_raise_exception import input_temperature\n"
-                "assert input_temperature('0') == 0\n"
-                "assert input_temperature('40') == 40\n"
-                "print('OK')\n"
+            setup="from ft_raise_exception import input_temperature",
+            assertions=(
+                Eq("input_temperature('0')", 0),
+                Eq("input_temperature('40')", 40),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="input_temperature('100') raises (>40)",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_raise_exception import input_temperature\n"
-                "try:\n"
-                "    input_temperature('100')\n"
-                "except Exception:\n"
-                "    print('OK')\n"
-                "else:\n"
-                "    raise AssertionError('100 must raise (max 40)')\n"
+            setup="from ft_raise_exception import input_temperature",
+            assertions=(
+                Raises(
+                    "input_temperature('100')",
+                    message="100 must raise (max 40)",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="input_temperature('-50') raises (<0)",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_raise_exception import input_temperature\n"
-                "try:\n"
-                "    input_temperature('-50')\n"
-                "except Exception:\n"
-                "    print('OK')\n"
-                "else:\n"
-                "    raise AssertionError('-50 must raise (min 0)')\n"
+            setup="from ft_raise_exception import input_temperature",
+            assertions=(
+                Raises(
+                    "input_temperature('-50')",
+                    message="-50 must raise (min 0)",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="input_temperature('abc') raises",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_raise_exception import input_temperature\n"
-                "try:\n"
-                "    input_temperature('abc')\n"
-                "except Exception:\n"
-                "    print('OK')\n"
-                "else:\n"
-                "    raise AssertionError('abc must raise')\n"
+            setup="from ft_raise_exception import input_temperature",
+            assertions=(
+                Raises(
+                    "input_temperature('abc')",
+                    message="abc must raise",
+                ),
             ),
         ),
         ScriptCheck(
@@ -235,118 +194,76 @@ _EX2 = Exercise(
             "ft_different_errors.py", ("print", "open", "int", "range"),
             allow_method_calls=False,
         ),
-        InlineCheck(
+        NoNodeTypesCheck(
             label="garden_operations triggers real faults (no manual raise)",
-            code=(
-                _ast_helper("ft_different_errors.py")
-                + "op = _fn('garden_operations')\n"
-                "assert op is not None, 'garden_operations missing'\n"
-                "assert not any(\n"
-                "    isinstance(n, ast.Raise) for n in ast.walk(op)\n"
-                "), (\n"
-                "    'garden_operations must trigger real faulty code '\n"
-                "    \"(int('abc'), 1/0, open(missing), str+int), \"\n"
-                "    'not manual raise'\n"
-                ")\n"
-                "print('OK')\n"
+            scope=("ft_different_errors.py",),
+            node_types=("Raise",),
+            inside_function="garden_operations",
+            reason=(
+                "garden_operations must trigger real faulty code "
+                "(int('abc'), 1/0, open(missing), str+int), not "
+                "manual raise"
             ),
         ),
-        InlineCheck(
+        FunctionTryHandlersCheck(
             label="test_error_types catches multiple error types in one try",
-            code=(
-                _ast_helper("ft_different_errors.py")
-                + "test_fn = _fn('test_error_types')\n"
-                "assert test_fn is not None, 'test_error_types missing'\n"
-                "ok = False\n"
-                "for n in ast.walk(test_fn):\n"
-                "    if not isinstance(n, ast.Try):\n"
-                "        continue\n"
-                "    if len(n.handlers) >= 2:\n"
-                "        ok = True\n"
-                "        break\n"
-                "    for h in n.handlers:\n"
-                "        if (\n"
-                "            isinstance(h.type, ast.Tuple)\n"
-                "            and len(h.type.elts) >= 2\n"
-                "        ):\n"
-                "            ok = True\n"
-                "            break\n"
-                "    if ok:\n"
-                "        break\n"
-                "assert ok, (\n"
-                "    'test_error_types must include a try block that '\n"
-                "    'catches multiple exception types — either via a tuple '\n"
-                "    '(except (E1, E2):) or multiple except handlers on the '\n"
-                "    'same try'\n"
-                ")\n"
-                "print('OK')\n"
+            file="ft_different_errors.py",
+            function="test_error_types",
+            min_handlers=2,
+            reason=(
+                "test_error_types must include a try block that catches "
+                "multiple exception types — either via a tuple "
+                "(except (E1, E2):) or multiple except handlers"
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="garden_operations(0) raises ValueError",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_different_errors import garden_operations\n"
-                "try:\n"
-                "    garden_operations(0)\n"
-                "except ValueError:\n"
-                "    print('OK')\n"
-                "else:\n"
-                "    raise AssertionError('op 0 must raise ValueError')\n"
+            setup="from ft_different_errors import garden_operations",
+            assertions=(
+                Raises(
+                    "garden_operations(0)",
+                    exception_types=("ValueError",),
+                    message="op 0 must raise ValueError",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="garden_operations(1) raises ZeroDivisionError",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_different_errors import garden_operations\n"
-                "try:\n"
-                "    garden_operations(1)\n"
-                "except ZeroDivisionError:\n"
-                "    print('OK')\n"
-                "else:\n"
-                "    raise AssertionError('op 1 must raise ZeroDivisionError')\n"
+            setup="from ft_different_errors import garden_operations",
+            assertions=(
+                Raises(
+                    "garden_operations(1)",
+                    exception_types=("ZeroDivisionError",),
+                    message="op 1 must raise ZeroDivisionError",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="garden_operations(2) raises FileNotFoundError",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_different_errors import garden_operations\n"
-                "try:\n"
-                "    garden_operations(2)\n"
-                "except FileNotFoundError:\n"
-                "    print('OK')\n"
-                "else:\n"
-                "    raise AssertionError('op 2 must raise FileNotFoundError')\n"
+            setup="from ft_different_errors import garden_operations",
+            assertions=(
+                Raises(
+                    "garden_operations(2)",
+                    exception_types=("FileNotFoundError",),
+                    message="op 2 must raise FileNotFoundError",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="garden_operations(3) raises TypeError",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_different_errors import garden_operations\n"
-                "try:\n"
-                "    garden_operations(3)\n"
-                "except TypeError:\n"
-                "    print('OK')\n"
-                "else:\n"
-                "    raise AssertionError('op 3 must raise TypeError')\n"
+            setup="from ft_different_errors import garden_operations",
+            assertions=(
+                Raises(
+                    "garden_operations(3)",
+                    exception_types=("TypeError",),
+                    message="op 3 must raise TypeError",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="garden_operations(4) does not raise",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_different_errors import garden_operations\n"
-                "garden_operations(4)\n"
-                "print('OK')\n"
-            ),
+            setup="from ft_different_errors import garden_operations",
+            assertions=(NotRaises("garden_operations(4)"),),
         ),
         ScriptCheck(
             label="script prints all four error types",
@@ -382,51 +299,59 @@ _EX3 = Exercise(
             "ft_custom_errors.py", ("print", "super"),
             allow_method_calls=True,
         ),
-        InlineCheck(
+        AssertCheck(
             label=(
                 "GardenError(Exception), PlantError(GardenError), "
                 "WaterError(GardenError)"
             ),
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_custom_errors import GardenError, PlantError, WaterError\n"
-                "assert issubclass(GardenError, Exception)\n"
-                "assert issubclass(PlantError, GardenError)\n"
-                "assert issubclass(WaterError, GardenError)\n"
-                "print('OK')\n"
+            setup=(
+                "from ft_custom_errors import "
+                "GardenError, PlantError, WaterError"
+            ),
+            assertions=(
+                Subclass("GardenError", "Exception"),
+                Subclass("PlantError", "GardenError"),
+                Subclass("WaterError", "GardenError"),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="custom errors expose a non-empty default message",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_custom_errors import GardenError, PlantError, WaterError\n"
-                "for cls in (GardenError, PlantError, WaterError):\n"
-                "    msg = str(cls())\n"
-                "    assert msg, (\n"
-                "        f'{cls.__name__}() must have a default message'\n"
-                "    )\n"
-                "print('OK')\n"
+            setup=(
+                "from ft_custom_errors import "
+                "GardenError, PlantError, WaterError"
+            ),
+            assertions=(
+                Truthy(
+                    "str(GardenError())",
+                    message="GardenError() must have a default message",
+                ),
+                Truthy(
+                    "str(PlantError())",
+                    message="PlantError() must have a default message",
+                ),
+                Truthy(
+                    "str(WaterError())",
+                    message="WaterError() must have a default message",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="catching GardenError catches PlantError and WaterError",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_custom_errors import GardenError, PlantError, WaterError\n"
-                "for sub in (PlantError, WaterError):\n"
-                "    try:\n"
-                "        raise sub('boom')\n"
-                "    except GardenError:\n"
-                "        pass\n"
-                "    else:\n"
-                "        raise AssertionError(\n"
-                "            f'{sub.__name__} not caught by GardenError'\n"
-                "        )\n"
-                "print('OK')\n"
+            setup=(
+                "from ft_custom_errors import "
+                "GardenError, PlantError, WaterError"
+            ),
+            assertions=(
+                Raises(
+                    "raise PlantError('boom')",
+                    exception_types=("GardenError",),
+                    message="PlantError not caught by GardenError",
+                ),
+                Raises(
+                    "raise WaterError('boom')",
+                    exception_types=("GardenError",),
+                    message="WaterError not caught by GardenError",
+                ),
             ),
         ),
         ScriptCheck(
@@ -462,68 +387,30 @@ _EX4 = Exercise(
             "ft_finally_block.py", ("print",),
             allow_method_calls=True,
         ),
-        InlineCheck(
+        AssertCheck(
             label="water_plant('Tomato') succeeds (capitalized)",
-            code=(
-                "import io, sys\n"
-                "from contextlib import redirect_stdout\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_finally_block import water_plant\n"
-                "with redirect_stdout(io.StringIO()):\n"
-                "    water_plant('Tomato')\n"
-                "print('OK')\n"
-            ),
+            setup="from ft_finally_block import water_plant",
+            quiet=True,
+            assertions=(NotRaises("water_plant('Tomato')"),),
         ),
-        InlineCheck(
+        AssertCheck(
             label="water_plant('lettuce') raises (not capitalized)",
-            code=(
-                "import io, sys\n"
-                "from contextlib import redirect_stdout\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_finally_block import water_plant\n"
-                "with redirect_stdout(io.StringIO()):\n"
-                "    try:\n"
-                "        water_plant('lettuce')\n"
-                "    except Exception:\n"
-                "        pass\n"
-                "    else:\n"
-                "        raise AssertionError(\n"
-                "            \"water_plant('lettuce') must raise\"\n"
-                "        )\n"
-                "print('OK')\n"
+            setup="from ft_finally_block import water_plant",
+            quiet=True,
+            assertions=(
+                Raises(
+                    "water_plant('lettuce')",
+                    message="water_plant('lettuce') must raise",
+                ),
             ),
         ),
-        InlineCheck(
+        FunctionTryFinallyReturnCheck(
             label=(
                 "test_watering_system has try/except/finally with return "
                 "on error"
             ),
-            code=(
-                _ast_helper("ft_finally_block.py")
-                + "fn = _fn('test_watering_system')\n"
-                "assert fn is not None, 'test_watering_system missing'\n"
-                "tries = [n for n in ast.walk(fn) if isinstance(n, ast.Try)]\n"
-                "assert tries, (\n"
-                "    'test_watering_system must use try/except/finally'\n"
-                ")\n"
-                "has_finally = any(tr.finalbody for tr in tries)\n"
-                "assert has_finally, (\n"
-                "    'test_watering_system must include a finally block '\n"
-                "    'to always close the watering system'\n"
-                ")\n"
-                "has_return_in_except = any(\n"
-                "    isinstance(s, ast.Return)\n"
-                "    for tr in tries\n"
-                "    for h in tr.handlers\n"
-                "    for s in ast.walk(h)\n"
-                ")\n"
-                "assert has_return_in_except, (\n"
-                "    'test_watering_system must return from an except '\n"
-                "    'handler when an error occurs (stop tests, return '\n"
-                "    'to main)'\n"
-                ")\n"
-                "print('OK')\n"
-            ),
+            file="ft_finally_block.py",
+            function="test_watering_system",
         ),
         ScriptCheck(
             label="script prints watering banner and cleanup runs",

@@ -1,9 +1,14 @@
 from pythonette.checks import (
+    AssertCheck,
     AuthorizedCheck,
+    Eq,
     ImportCheck,
-    InlineCheck,
+    IsInstance,
+    RequireNodeTypesCheck,
+    RunCheck,
     ScriptCheck,
     StructureCheck,
+    Truthy,
 )
 from pythonette.subjects.registry import Exercise, Module
 
@@ -30,37 +35,18 @@ def _struct(
     )
 
 
-def _runpy_with_argv(file: str, argv: tuple[str, ...]) -> str:
-    """Build code that runs `file` as __main__ with a given sys.argv,
-    capturing stdout into `out` for further assertions."""
-    return (
-        "import runpy, sys, io\n"
-        "from contextlib import redirect_stdout\n"
-        "sys.path.insert(0, '.')\n"
-        f"sys.argv = {list(argv)!r}\n"
-        "buf = io.StringIO()\n"
-        "with redirect_stdout(buf):\n"
-        f"    runpy.run_path({file!r}, run_name='__main__')\n"
-        "out = buf.getvalue()\n"
-    )
-
-
 def _argv_contains(
     label: str, file: str, argv: tuple[str, ...], needles: tuple[str, ...],
-) -> InlineCheck:
-    """One InlineCheck = a group of substrings to find in stdout
-    (case-insensitive). Used when several markers all describe the same
-    'thing' (e.g. 'most abundant' + 'least abundant')."""
-    needle_list = [n.lower() for n in needles]
-    return InlineCheck(
+) -> RunCheck:
+    """Run `file` with a given argv and assert each substring is in the
+    captured stdout (case-insensitive). Used when several markers all
+    describe the same 'thing' (e.g. 'most abundant' + 'least abundant')."""
+    return RunCheck(
         label=label,
-        code=(
-            _runpy_with_argv(file, argv)
-            + f"low = out.lower()\n"
-            f"for needle in {needle_list!r}:\n"
-            "    assert needle in low, (needle, out)\n"
-            "print('OK')\n"
-        ),
+        file=file,
+        argv=argv,
+        stdout_contains=needles,
+        case_insensitive=True,
     )
 
 
@@ -219,16 +205,13 @@ _EX3 = Exercise(
         AuthorizedCheck(
             _EX3_FILE, ("len", "print", "set"), allow_method_calls=True,
         ),
-        InlineCheck(
+        AssertCheck(
             label="gen_player_achievements() returns a set",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_achievement_tracker import gen_player_achievements\n"
-                "got = gen_player_achievements()\n"
-                "assert isinstance(got, set), type(got)\n"
-                "print('OK')\n"
+            setup=(
+                "from ft_achievement_tracker import "
+                "gen_player_achievements"
             ),
+            assertions=(IsInstance("gen_player_achievements()", "set"),),
         ),
         _script_contains(
             "all four players are listed",
@@ -339,38 +322,41 @@ _EX5 = Exercise(
             ("next", "range", "len", "print"),
             allow_method_calls=True,
         ),
-        InlineCheck(
+        AssertCheck(
             label="gen_event and consume_event are generator functions",
-            code=(
-                "import sys, inspect\n"
-                "sys.path.insert(0, '.')\n"
+            setup=(
+                "import inspect\n"
                 "from ft_data_stream import gen_event, consume_event\n"
-                "assert inspect.isgeneratorfunction(gen_event), (\n"
-                "    'gen_event must be a generator function (use yield)'\n"
-                ")\n"
-                "assert inspect.isgeneratorfunction(consume_event), (\n"
-                "    'consume_event must be a generator function "
-                "(use yield)'\n"
-                ")\n"
-                "ev = next(gen_event())\n"
-                "assert isinstance(ev, tuple) and len(ev) == 2, ev\n"
-                "print('OK')\n"
+                "ev = next(gen_event())"
+            ),
+            assertions=(
+                Truthy(
+                    "inspect.isgeneratorfunction(gen_event)",
+                    message=(
+                        "gen_event must be a generator function (use yield)"
+                    ),
+                ),
+                Truthy(
+                    "inspect.isgeneratorfunction(consume_event)",
+                    message=(
+                        "consume_event must be a generator function "
+                        "(use yield)"
+                    ),
+                ),
+                IsInstance("ev", "tuple"),
+                Eq("len(ev)", 2),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="consume_event drains the input list to empty",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
+            setup=(
                 "from ft_data_stream import consume_event\n"
                 "data = [('a', 'x'), ('b', 'y'), ('c', 'z')]\n"
-                "seen = [ev for ev in consume_event(data)]\n"
-                "assert len(seen) == 3, seen\n"
-                "assert data == [], (\n"
-                "    f'consume_event must remove items as it yields, '\n"
-                "    f'list still: {data!r}'\n"
-                ")\n"
-                "print('OK')\n"
+                "seen = [ev for ev in consume_event(data)]"
+            ),
+            assertions=(
+                Eq("len(seen)", 3),
+                Eq("data", []),
             ),
         ),
         _script_contains(
@@ -409,27 +395,11 @@ _EX6 = Exercise(
             ("print", "len", "sum", "round"),
             allow_method_calls=True,
         ),
-        InlineCheck(
+        RequireNodeTypesCheck(
             label="uses both list and dict comprehensions",
-            code=(
-                "import ast\n"
-                "from pathlib import Path\n"
-                "src = Path('ft_data_alchemist.py').read_text(\n"
-                "    encoding='utf-8'\n"
-                ")\n"
-                "tree = ast.parse(src, filename='ft_data_alchemist.py')\n"
-                "has_lc = any(\n"
-                "    isinstance(n, ast.ListComp) for n in ast.walk(tree)\n"
-                ")\n"
-                "has_dc = any(\n"
-                "    isinstance(n, ast.DictComp) for n in ast.walk(tree)\n"
-                ")\n"
-                "assert has_lc and has_dc, (\n"
-                "    f'Script must use list AND dict comprehensions. '\n"
-                "    f'ListComp: {has_lc}, DictComp: {has_dc}'\n"
-                ")\n"
-                "print('OK')\n"
-            ),
+            scope=("ft_data_alchemist.py",),
+            node_types=("ListComp", "DictComp"),
+            reason="Script must use list AND dict comprehensions",
         ),
         _script_contains(
             "script: capitalized lists (all + filtered) printed",

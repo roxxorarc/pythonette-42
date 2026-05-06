@@ -1,10 +1,16 @@
 from pythonette.checks import (
+    AssertCheck,
     AuthorizedCheck,
-    InlineCheck,
+    HasAttr,
+    IsNot,
     MethodArityCheck,
     MethodSignatureCheck,
+    NotRaises,
+    RequireNodeTypesCheck,
     ScriptCheck,
     StructureCheck,
+    Subclass,
+    Truthy,
 )
 from pythonette.subjects.registry import Exercise, Module
 
@@ -75,15 +81,10 @@ _EX1 = Exercise(
             require_main_guard=True,
             label="Plant class + __main__ guard",
         ),
-        InlineCheck(
+        AssertCheck(
             label="Plant class exposes show()",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_garden_data import Plant\n"
-                "assert hasattr(Plant, 'show'), 'Plant.show missing'\n"
-                "print('OK')\n"
-            ),
+            setup="from ft_garden_data import Plant",
+            assertions=(HasAttr("Plant", "show", message="Plant.show missing"),),
         ),
         MethodSignatureCheck(
             "ft_garden_data", "Plant", "show", ("self",),
@@ -112,15 +113,12 @@ _EX2 = Exercise(
             require_main_guard=True,
             label="Plant class + __main__ guard",
         ),
-        InlineCheck(
+        AssertCheck(
             label="Plant exposes grow / age",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_plant_growth import Plant\n"
-                "assert hasattr(Plant, 'grow'), 'Plant.grow missing'\n"
-                "assert hasattr(Plant, 'age'), 'Plant.age missing'\n"
-                "print('OK')\n"
+            setup="from ft_plant_growth import Plant",
+            assertions=(
+                HasAttr("Plant", "grow", message="Plant.grow missing"),
+                HasAttr("Plant", "age", message="Plant.age missing"),
             ),
         ),
         MethodArityCheck("ft_plant_growth", "Plant", "grow", 0),
@@ -154,15 +152,17 @@ _EX3 = Exercise(
             label="Plant class + __main__ guard",
         ),
         MethodArityCheck("ft_plant_factory", "Plant", "__init__", 3),
-        InlineCheck(
+        AssertCheck(
             label="constructor accepts (name, height, age) positionally",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_plant_factory import Plant\n"
-                "p = Plant('Rose', 25.0, 30)\n"
-                "assert p is not None\n"
-                "print('OK')\n"
+            setup="from ft_plant_factory import Plant",
+            assertions=(
+                NotRaises(
+                    "Plant('Rose', 25.0, 30)",
+                    message=(
+                        "Plant.__init__ must accept (name, height, age) "
+                        "positionally"
+                    ),
+                ),
             ),
         ),
         AuthorizedCheck("ft_plant_factory.py", ("print", "range", "round")),
@@ -192,21 +192,27 @@ _EX4 = Exercise(
         MethodArityCheck("ft_garden_security", "Plant", "set_age", 1),
         MethodArityCheck("ft_garden_security", "Plant", "get_height", 0),
         MethodArityCheck("ft_garden_security", "Plant", "get_age", 0),
-        InlineCheck(
+        AssertCheck(
             label="setters reject negative values",
-            code=(
-                "import io, sys\n"
-                "from contextlib import redirect_stdout\n"
-                "sys.path.insert(0, '.')\n"
+            quiet=True,
+            setup=(
                 "from ft_garden_security import Plant\n"
-                "with redirect_stdout(io.StringIO()):\n"
-                "    p = Plant('Rose', 15.0, 10)\n"
-                "    p.set_height(25); p.set_age(30)\n"
-                "    h_ok, a_ok = p.get_height(), p.get_age()\n"
-                "    p.set_height(-5); p.set_age(-3)\n"
-                "assert p.get_height() == h_ok, 'neg height accepted'\n"
-                "assert p.get_age() == a_ok, 'neg age accepted'\n"
-                "print('OK')\n"
+                "p = Plant('Rose', 15.0, 10)\n"
+                "p.set_height(25)\n"
+                "p.set_age(30)\n"
+                "h_ok, a_ok = p.get_height(), p.get_age()\n"
+                "p.set_height(-5)\n"
+                "p.set_age(-3)"
+            ),
+            assertions=(
+                Truthy(
+                    "p.get_height() == h_ok",
+                    message="negative height was accepted",
+                ),
+                Truthy(
+                    "p.get_age() == a_ok",
+                    message="negative age was accepted",
+                ),
             ),
         ),
         AuthorizedCheck(
@@ -237,75 +243,66 @@ _EX5 = Exercise(
             require_main_guard=True,
             label="Plant/Flower/Tree/Vegetable + __main__ guard",
         ),
-        InlineCheck(
+        AssertCheck(
             label="Flower / Tree / Vegetable inherit Plant",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_plant_types import Plant, Flower, Tree, Vegetable\n"
-                "assert issubclass(Flower, Plant)\n"
-                "assert issubclass(Tree, Plant)\n"
-                "assert issubclass(Vegetable, Plant)\n"
-                "print('OK')\n"
+            setup=(
+                "from ft_plant_types import Plant, Flower, Tree, Vegetable"
+            ),
+            assertions=(
+                Subclass("Flower", "Plant"),
+                Subclass("Tree", "Plant"),
+                Subclass("Vegetable", "Plant"),
             ),
         ),
         MethodArityCheck("ft_plant_types", "Flower", "bloom", 0),
         MethodArityCheck("ft_plant_types", "Tree", "produce_shade", 0),
-        InlineCheck(
+        AssertCheck(
             label="Flower(name, height, age, color) accepted",
-            code=(
-                "import io, sys\n"
-                "from contextlib import redirect_stdout\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_plant_types import Flower\n"
-                "try:\n"
-                "    with redirect_stdout(io.StringIO()):\n"
-                "        f = Flower('Rose', 15.0, 10, 'red')\n"
-                "except TypeError:\n"
-                "    raise AssertionError(\n"
-                "        'Flower.__init__ must accept 4 parameters: '\n"
-                "        'name, height, age, color'\n"
-                "    )\n"
-                "assert f is not None\n"
-                "print('OK')\n"
+            setup="from ft_plant_types import Flower",
+            quiet=True,
+            assertions=(
+                NotRaises(
+                    "Flower('Rose', 15.0, 10, 'red')",
+                    exception_types=("TypeError",),
+                    message=(
+                        "Flower.__init__ must accept 4 parameters: "
+                        "name, height, age, color"
+                    ),
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="Tree(name, height, age, trunk_diameter) accepted",
-            code=(
-                "import io, sys\n"
-                "from contextlib import redirect_stdout\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_plant_types import Tree\n"
-                "try:\n"
-                "    with redirect_stdout(io.StringIO()):\n"
-                "        t = Tree('Oak', 200.0, 365, 5.0)\n"
-                "except TypeError:\n"
-                "    raise AssertionError(\n"
-                "        'Tree.__init__ must accept 4 parameters: '\n"
-                "        'name, height, age, trunk_diameter'\n"
-                "    )\n"
-                "assert t is not None\n"
-                "print('OK')\n"
+            setup="from ft_plant_types import Tree",
+            quiet=True,
+            assertions=(
+                NotRaises(
+                    "Tree('Oak', 200.0, 365, 5.0)",
+                    exception_types=("TypeError",),
+                    message=(
+                        "Tree.__init__ must accept 4 parameters: "
+                        "name, height, age, trunk_diameter"
+                    ),
+                ),
             ),
         ),
-        InlineCheck(
-            label="Vegetable(name, height, age, harvest_season, nutritional_value) accepted",
-            code=(
-                "import io, sys\n"
-                "from contextlib import redirect_stdout\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_plant_types import Vegetable\n"
-                "try:\n"
-                "    with redirect_stdout(io.StringIO()):\n"
-                "        v = Vegetable('Tomato', 5.0, 10, 'April', 0)\n"
-                "except TypeError:\n"
-                "    raise AssertionError(\n"
-                "        'Vegetable.__init__ must accept 5 parameters: '\n"
-                "        'name, height, age, harvest_season, nutritional_value'\n"
-                "    )\n"
-                "assert v is not None\n"
-                "print('OK')\n"
+        AssertCheck(
+            label=(
+                "Vegetable(name, height, age, harvest_season, "
+                "nutritional_value) accepted"
+            ),
+            setup="from ft_plant_types import Vegetable",
+            quiet=True,
+            assertions=(
+                NotRaises(
+                    "Vegetable('Tomato', 5.0, 10, 'April', 0)",
+                    exception_types=("TypeError",),
+                    message=(
+                        "Vegetable.__init__ must accept 5 parameters: "
+                        "name, height, age, harvest_season, "
+                        "nutritional_value"
+                    ),
+                ),
             ),
         ),
         AuthorizedCheck(
@@ -346,104 +343,91 @@ _EX6 = Exercise(
             require_main_guard=True,
             label="Plant/Flower/Seed + __main__ guard + free function",
         ),
-        InlineCheck(
+        AssertCheck(
             label="Seed inherits Flower",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_garden_analytics import Flower, Seed\n"
-                "assert issubclass(Seed, Flower)\n"
-                "print('OK')\n"
-            ),
+            setup="from ft_garden_analytics import Flower, Seed",
+            assertions=(Subclass("Seed", "Flower"),),
         ),
-        InlineCheck(
+        AssertCheck(
             label="Plant exposes a static and a class method",
-            code=(
-                "import inspect, sys\n"
-                "sys.path.insert(0, '.')\n"
+            setup=(
+                "import inspect\n"
                 "from ft_garden_analytics import Plant\n"
-                "names = [n for n in dir(Plant) if not n.startswith('_')]\n"
-                "has_static = any(\n"
-                "    isinstance(inspect.getattr_static(Plant, n),\n"
-                "               staticmethod) for n in names)\n"
-                "has_class = any(\n"
-                "    isinstance(inspect.getattr_static(Plant, n),\n"
-                "               classmethod) for n in names)\n"
-                "assert has_static, 'no @staticmethod on Plant'\n"
-                "assert has_class, 'no @classmethod on Plant'\n"
-                "print('OK')\n"
+                "names = [n for n in dir(Plant) if not n.startswith('_')]"
+            ),
+            assertions=(
+                Truthy(
+                    "any("
+                    "isinstance("
+                    "inspect.getattr_static(Plant, n), staticmethod"
+                    ") for n in names"
+                    ")",
+                    message="no @staticmethod on Plant",
+                ),
+                Truthy(
+                    "any("
+                    "isinstance("
+                    "inspect.getattr_static(Plant, n), classmethod"
+                    ") for n in names"
+                    ")",
+                    message="no @classmethod on Plant",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="Plant has a nested class for stats",
-            code=(
-                "import inspect, sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_garden_analytics import Plant\n"
-                "nested = [\n"
-                "    n for n in dir(Plant)\n"
-                "    if inspect.isclass(\n"
-                "        inspect.getattr_static(Plant, n, None)\n"
-                "    )\n"
-                "]\n"
-                "assert nested, 'no nested class in Plant for stats'\n"
-                "print('OK')\n"
+            setup=(
+                "import inspect\n"
+                "from ft_garden_analytics import Plant"
+            ),
+            assertions=(
+                Truthy(
+                    "any("
+                    "inspect.isclass("
+                    "inspect.getattr_static(Plant, n, None)"
+                    ") for n in dir(Plant)"
+                    ")",
+                    message="no nested class in Plant for stats",
+                ),
             ),
         ),
-        InlineCheck(
+        RequireNodeTypesCheck(
             label="module exposes a free function (not a method)",
-            code=(
-                "import ast\n"
-                "from pathlib import Path\n"
-                "src = Path('ft_garden_analytics.py').read_text(\n"
-                "    encoding='utf-8'\n"
-                ")\n"
-                "tree = ast.parse(src, filename='ft_garden_analytics.py')\n"
-                "free = [\n"
-                "    n.name for n in tree.body\n"
-                "    if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))\n"
-                "]\n"
-                "assert free, (\n"
-                "    'no top-level function — the spec asks for a unique '\n"
-                "    'function (not part of any class) that displays stats'\n"
-                ")\n"
-                "print('OK')\n"
+            scope=("ft_garden_analytics.py",),
+            node_types=("FunctionDef",),
+            top_level_only=True,
+            reason=(
+                "no top-level function — the spec asks for a unique "
+                "function (not part of any class) that displays stats"
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="Seed overrides show()",
-            code=(
-                "import sys\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_garden_analytics import Seed, Flower\n"
-                "seed_show = getattr(Seed, 'show', None)\n"
-                "flower_show = getattr(Flower, 'show', None)\n"
-                "assert seed_show is not None, 'Seed.show missing'\n"
-                "assert seed_show is not flower_show, (\n"
-                "    'Seed must override show()'\n"
-                ")\n"
-                "print('OK')\n"
+            setup="from ft_garden_analytics import Seed, Flower",
+            assertions=(
+                Truthy(
+                    "getattr(Seed, 'show', None) is not None",
+                    message="Seed.show missing",
+                ),
+                IsNot(
+                    "Seed.show", "Flower.show",
+                    message="Seed must override show()",
+                ),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="Seed(name, height, age, color) accepted",
-            code=(
-                "import io, sys\n"
-                "from contextlib import redirect_stdout\n"
-                "sys.path.insert(0, '.')\n"
-                "from ft_garden_analytics import Seed\n"
-                "with redirect_stdout(io.StringIO()):\n"
-                "    s = Seed('Sunflower', 80.0, 45, 'yellow')\n"
-                "assert s is not None\n"
-                "print('OK')\n"
+            setup="from ft_garden_analytics import Seed",
+            quiet=True,
+            assertions=(
+                NotRaises("Seed('Sunflower', 80.0, 45, 'yellow')"),
             ),
         ),
-        InlineCheck(
+        AssertCheck(
             label="Plant has a classmethod callable with no args (anonymous)",
-            code=(
-                "import inspect, io, sys\n"
-                "from contextlib import redirect_stdout\n"
-                "sys.path.insert(0, '.')\n"
+            quiet=True,
+            setup=(
+                "import inspect\n"
                 "from ft_garden_analytics import Plant\n"
                 "cms = [\n"
                 "    n for n in dir(Plant)\n"
@@ -453,19 +437,22 @@ _EX6 = Exercise(
                 "    )\n"
                 "]\n"
                 "ok = False\n"
-                "with redirect_stdout(io.StringIO()):\n"
-                "    for n in cms:\n"
-                "        try:\n"
-                "            getattr(Plant, n)()\n"
-                "            ok = True\n"
-                "            break\n"
-                "        except TypeError:\n"
-                "            continue\n"
-                "assert ok, (\n"
-                "    f'no @classmethod on Plant callable with no args '\n"
-                "    f'(found: {cms!r})'\n"
-                ")\n"
-                "print('OK')\n"
+                "for _name in cms:\n"
+                "    try:\n"
+                "        getattr(Plant, _name)()\n"
+                "        ok = True\n"
+                "        break\n"
+                "    except TypeError:\n"
+                "        continue"
+            ),
+            assertions=(
+                Truthy(
+                    "ok",
+                    message=(
+                        "no @classmethod on Plant callable with no "
+                        "arguments (anonymous)"
+                    ),
+                ),
             ),
         ),
         AuthorizedCheck(
