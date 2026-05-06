@@ -249,8 +249,18 @@ class AuthorizedCheck(Check):
 
 @dataclass(frozen=True)
 class ImportCheck(Check):
+    """Static check on imports.
+
+    `file` is a path relative to the exercise dir. If it points to a file,
+    that file is checked; if it points to a directory, every .py file
+    under it (recursively) is checked. `allow_relative=True` skips
+    `from . import ...` / `from .x import ...` since those are by
+    definition project-local.
+    """
+
     file: str
     allowed: tuple[str, ...]
+    allow_relative: bool = False
 
     @property
     def name(self) -> str:
@@ -259,39 +269,57 @@ class ImportCheck(Check):
             f"may be imported"
         )
 
+    def _files(self, exercise_dir: Path) -> list[Path]:
+        path = exercise_dir / self.file
+        if path.is_file():
+            return [path]
+        if path.is_dir():
+            return [
+                p for p in sorted(path.rglob("*.py"))
+                if "__pycache__" not in p.parts
+            ]
+        return []
+
     def run(
         self, exercise_dir: Path, exercise: "Exercise"
     ) -> CheckResult:
-        path = exercise_dir / self.file
-        if not path.is_file():
+        files = self._files(exercise_dir)
+        if not files:
             return CheckResult(self.name, False, f"{self.file} not found")
-        try:
-            tree = ast.parse(
-                path.read_text(encoding="utf-8"), filename=self.file
-            )
-        except SyntaxError as exc:
-            return CheckResult(self.name, False, f"syntax error: {exc}")
-
         allowed = set(self.allowed)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    root = alias.name.split(".", 1)[0]
-                    if root not in allowed:
+
+        for path in files:
+            rel = path.relative_to(exercise_dir)
+            try:
+                tree = ast.parse(
+                    path.read_text(encoding="utf-8"), filename=str(rel)
+                )
+            except SyntaxError as exc:
+                return CheckResult(
+                    self.name, False, f"syntax error in {rel}: {exc}",
+                )
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        root = alias.name.split(".", 1)[0]
+                        if root not in allowed:
+                            return CheckResult(
+                                self.name, False,
+                                f"forbidden import '{alias.name}' at "
+                                f"{rel}:{node.lineno} (allowed: "
+                                f"{', '.join(sorted(allowed)) or 'none'})",
+                            )
+                elif isinstance(node, ast.ImportFrom):
+                    if self.allow_relative and (node.level or 0) > 0:
+                        continue
+                    module = (node.module or "").split(".", 1)[0]
+                    if module and module not in allowed:
                         return CheckResult(
                             self.name, False,
-                            f"forbidden import '{alias.name}' at line "
-                            f"{node.lineno} (allowed: "
+                            f"forbidden import 'from {node.module}' at "
+                            f"{rel}:{node.lineno} (allowed: "
                             f"{', '.join(sorted(allowed)) or 'none'})",
                         )
-            elif isinstance(node, ast.ImportFrom):
-                module = (node.module or "").split(".", 1)[0]
-                if module and module not in allowed:
-                    return CheckResult(
-                        self.name, False,
-                        f"forbidden import 'from {node.module}' at line "
-                        f"{node.lineno} (allowed: "
-                        f"{', '.join(sorted(allowed)) or 'none'})",
-                    )
 
         return CheckResult(self.name, True)

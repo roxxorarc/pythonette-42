@@ -12,6 +12,13 @@ class Exercise:
     authorized: tuple[str, ...] = ()
     checks: tuple[Check, ...] = ()
     explain: str = ""
+    # Extra files or directories (relative to exercise dir) the sandbox
+    # must copy alongside `filenames` so the script can import them.
+    # Used by module 06 where scripts share an `alchemy/` package.
+    support_paths: tuple[str, ...] = ()
+    # Filenames (basenames) for which mypy must be skipped, e.g. exercises
+    # that intentionally trigger a type-checker error per the subject.
+    mypy_skip: tuple[str, ...] = ()
 
     @property
     def primary_file(self) -> str:

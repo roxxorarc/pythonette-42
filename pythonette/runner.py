@@ -56,10 +56,24 @@ def _evaluate(group: list[Found]) -> ExerciseReport:
     exercise_dir = group[0].file.parent
 
     style: list[StyleResult] = []
+    py_files: list[Path] = []
     for fname in exercise.filenames:
         path = exercise_dir / fname
         if path.is_file():
-            style.append(check_flake8(path))
+            py_files.append(path)
+    for extra in getattr(exercise, "support_paths", ()):
+        extra_path = exercise_dir / extra
+        if extra_path.is_file() and extra_path.suffix == ".py":
+            py_files.append(extra_path)
+        elif extra_path.is_dir():
+            py_files.extend(
+                p for p in extra_path.rglob("*.py")
+                if "__pycache__" not in p.parts
+            )
+    mypy_skip = set(getattr(exercise, "mypy_skip", ()))
+    for path in py_files:
+        style.append(check_flake8(path))
+        if path.name not in mypy_skip:
             style.append(check_mypy(path))
 
     results: list[CheckResult] = [

@@ -56,6 +56,14 @@ def run_in_sandbox(
             src = exercise_dir / fname
             if src.is_file():
                 shutil.copy(src, sandbox / fname)
+        for extra in getattr(exercise, "support_paths", ()):
+            src = exercise_dir / extra
+            dst = sandbox / extra
+            if src.is_dir():
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            elif src.is_file():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(src, dst)
         target = sandbox / "_pythonette_harness.py"
         target.write_text(code)
         try:
