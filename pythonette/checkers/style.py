@@ -31,6 +31,7 @@ def check_mypy(file: Path) -> StyleResult:
             "--no-error-summary",
             "--hide-error-context",
             "--show-error-codes",
+            "--cache-dir=/dev/null",
             "--disallow-untyped-defs",
             "--disallow-incomplete-defs",
             "--check-untyped-defs",
