@@ -63,7 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
         "-u",
         "--update",
         action="store_true",
-        help="pull latest pythonette and reinstall",
+        help="pull latest pythonette and reinstall in-place",
+    )
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help="with -u: rebuild venv from scratch via install.sh",
     )
     return p
 
@@ -74,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.update:
         from pythonette.updater import update
 
-        return update()
+        return update(force=args.force)
 
     from pythonette.runner import run
 
