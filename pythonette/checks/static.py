@@ -245,3 +245,53 @@ class AuthorizedCheck(Check):
                     )
 
         return CheckResult(self.name, True)
+
+
+@dataclass(frozen=True)
+class ImportCheck(Check):
+    file: str
+    allowed: tuple[str, ...]
+
+    @property
+    def name(self) -> str:
+        return (
+            f"imports ({self.file}): only {', '.join(self.allowed)} "
+            f"may be imported"
+        )
+
+    def run(
+        self, exercise_dir: Path, exercise: "Exercise"
+    ) -> CheckResult:
+        path = exercise_dir / self.file
+        if not path.is_file():
+            return CheckResult(self.name, False, f"{self.file} not found")
+        try:
+            tree = ast.parse(
+                path.read_text(encoding="utf-8"), filename=self.file
+            )
+        except SyntaxError as exc:
+            return CheckResult(self.name, False, f"syntax error: {exc}")
+
+        allowed = set(self.allowed)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    root = alias.name.split(".", 1)[0]
+                    if root not in allowed:
+                        return CheckResult(
+                            self.name, False,
+                            f"forbidden import '{alias.name}' at line "
+                            f"{node.lineno} (allowed: "
+                            f"{', '.join(sorted(allowed)) or 'none'})",
+                        )
+            elif isinstance(node, ast.ImportFrom):
+                module = (node.module or "").split(".", 1)[0]
+                if module and module not in allowed:
+                    return CheckResult(
+                        self.name, False,
+                        f"forbidden import 'from {node.module}' at line "
+                        f"{node.lineno} (allowed: "
+                        f"{', '.join(sorted(allowed)) or 'none'})",
+                    )
+
+        return CheckResult(self.name, True)

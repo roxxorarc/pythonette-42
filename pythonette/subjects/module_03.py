@@ -1,5 +1,6 @@
 from pythonette.checks import (
     AuthorizedCheck,
+    ImportCheck,
     InlineCheck,
     ScriptCheck,
     StructureCheck,
@@ -81,6 +82,7 @@ _EX0 = Exercise(
     authorized=("len", "print"),
     checks=(
         _struct(_EX0_FILE, label="ft_command_quest top-level structure"),
+        ImportCheck(_EX0_FILE, ("sys",)),
         AuthorizedCheck(
             _EX0_FILE, ("len", "print"), allow_method_calls=False,
         ),
@@ -112,6 +114,7 @@ _EX1 = Exercise(
     authorized=("len", "sum", "max", "min", "print"),
     checks=(
         _struct(_EX1_FILE, label="ft_score_analytics top-level structure"),
+        ImportCheck(_EX1_FILE, ("sys",)),
         AuthorizedCheck(
             _EX1_FILE,
             ("len", "sum", "max", "min", "print", "int", "float"),
@@ -161,16 +164,17 @@ _EX2_STDIN_RETRY = "3,abc,0\n3,4,0\n4,5,6\n"
 _EX2 = Exercise(
     module_id="03", id="ex2",
     filenames=(_EX2_FILE,),
-    authorized=("input", "round", "print"),
+    authorized=("input", "round", "print", "sqrt"),
     checks=(
         _struct(
             _EX2_FILE,
             functions=("get_player_pos",),
             label="get_player_pos defined",
         ),
+        ImportCheck(_EX2_FILE, ("math",)),
         AuthorizedCheck(
             _EX2_FILE,
-            ("input", "round", "print", "float"),
+            ("input", "round", "print", "sqrt", "float"),
             allow_method_calls=True,
         ),
         _script_contains(
@@ -211,6 +215,7 @@ _EX3 = Exercise(
             functions=("gen_player_achievements",),
             label="gen_player_achievements defined",
         ),
+        ImportCheck(_EX3_FILE, ("random",)),
         AuthorizedCheck(
             _EX3_FILE, ("len", "print", "set"), allow_method_calls=True,
         ),
@@ -283,6 +288,7 @@ _EX4 = Exercise(
     authorized=("len", "print", "sum", "list", "round"),
     checks=(
         _struct(_EX4_FILE, label="ft_inventory_system top-level structure"),
+        ImportCheck(_EX4_FILE, ("sys",)),
         AuthorizedCheck(
             _EX4_FILE,
             ("len", "print", "sum", "list", "round", "int", "float"),

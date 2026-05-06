@@ -8,13 +8,18 @@ from pythonette.checks.runtime import (
     ScriptCheck,
     SignatureCheck,
 )
-from pythonette.checks.static import AuthorizedCheck, StructureCheck
+from pythonette.checks.static import (
+    AuthorizedCheck,
+    ImportCheck,
+    StructureCheck,
+)
 
 __all__ = [
     "AuthorizedCheck",
     "CallCheck",
     "Check",
     "CheckResult",
+    "ImportCheck",
     "InlineCheck",
     "MethodArityCheck",
     "MethodSignatureCheck",
