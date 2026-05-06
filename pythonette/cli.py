@@ -5,6 +5,24 @@ from pathlib import Path
 from pythonette import __version__
 
 
+def _normalize_module(value: str) -> str:
+    """Accept '2', '02', etc. — module ids are stored zero-padded to 2."""
+    s = value.strip()
+    if s.isdigit():
+        return s.zfill(2)
+    return s
+
+
+def _normalize_exercise(value: str) -> str:
+    """Accept '4', 'ex4', 'ex04' — exercise ids in registry are 'ex<digit>'."""
+    s = value.strip().lower()
+    if s.startswith("ex"):
+        s = s[2:]
+    if s.isdigit():
+        return f"ex{int(s)}"
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="pythonette",
@@ -17,8 +35,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="project directory (default: cwd)",
     )
-    p.add_argument("-m", "--module", help="restrict to one module id (e.g. 00)")
-    p.add_argument("-e", "--exercise", help="restrict to one exercise (e.g. ex00)")
+    p.add_argument(
+        "-m", "--module",
+        type=_normalize_module,
+        help="restrict to one module id (e.g. 2, 02, or 00)",
+    )
+    p.add_argument(
+        "-e", "--exercise",
+        type=_normalize_exercise,
+        help="restrict to one exercise (e.g. 4, ex4, or ex04)",
+    )
     p.add_argument(
         "--diff",
         action="store_true",
