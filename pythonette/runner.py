@@ -2,7 +2,7 @@ import argparse
 from dataclasses import dataclass
 
 from pythonette.checks import CheckResult
-from pythonette.checkers.style import StyleResult, check_flake8
+from pythonette.checkers.style import StyleResult, check_flake8, check_mypy
 from pythonette.detector import Found, detect
 from pythonette.printer import Printer
 
@@ -60,6 +60,7 @@ def _evaluate(group: list[Found]) -> ExerciseReport:
         path = exercise_dir / fname
         if path.is_file():
             style.append(check_flake8(path))
+            style.append(check_mypy(path))
 
     results: list[CheckResult] = [
         check.run(exercise_dir, exercise) for check in exercise.checks

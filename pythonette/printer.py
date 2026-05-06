@@ -52,7 +52,7 @@ class Printer:
         ex = report.found.exercise
         title = f"module {ex.module_id} · {ex.id}"
 
-        rows: list = [self._style_row(report)]
+        rows: list = list(self._style_rows(report))
         for result in report.results:
             rows.append(self._result_row(result))
 
@@ -71,17 +71,24 @@ class Printer:
         border = "green" if report.ok else "red"
         self.console.print(Panel(body, title=title, border_style=border))
 
-    def _style_row(self, report: "ExerciseReport") -> Text:
+    def _style_rows(self, report: "ExerciseReport"):
         if not report.style:
-            return Text("◯ style — no file checked", style="dim")
-        bad = [s for s in report.style if not s.ok]
-        if not bad:
-            return Text("✓ flake8 — clean", style="green")
-        out = Text()
-        out.append("✗ flake8 — KO\n", style="bold red")
-        for s in bad:
-            out.append(s.output + "\n", style="red")
-        return out
+            yield Text("◯ style — no file checked", style="dim")
+            return
+        by_tool: dict[str, list] = {}
+        for s in report.style:
+            by_tool.setdefault(s.tool, []).append(s)
+        for tool, results in by_tool.items():
+            bad = [r for r in results if not r.ok]
+            if not bad:
+                yield Text(f"✓ {tool} — clean", style="green")
+                continue
+            out = Text()
+            out.append(f"✗ {tool} — KO\n", style="bold red")
+            for r in bad:
+                if r.output:
+                    out.append(r.output + "\n", style="red")
+            yield out
 
     def _result_row(self, result: CheckResult) -> Group:
         if result.ok:
