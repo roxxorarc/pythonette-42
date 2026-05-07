@@ -63,27 +63,31 @@ class SignatureCheck(Check):
             lines.append(
                 f"expected = {list(self.expected_params)!r}\n"
                 "assert got == expected, (\n"
-                f"    f'{fn}() params: got={{got!r}} expected={{expected!r}}'\n"
+                f"    {fn!r} + '() params: got=' + repr(got) + "
+                "' expected=' + repr(expected)\n"
                 ")\n"
             )
         elif not self.require_callable_no_args:
             lines.append(
                 "assert got == [], (\n"
-                f"    f'{fn}() must take no parameters, got {{got!r}}'\n"
+                f"    {fn!r} + '() must take no parameters, got ' + "
+                "repr(got)\n"
                 ")\n"
             )
         if self.require_callable_no_args:
             lines.append(
                 "for p in sig.parameters.values():\n"
                 "    assert p.default is not inspect.Parameter.empty, (\n"
-                f"        f'{fn}(): param {{p.name!r}} needs a default'\n"
+                f"        {fn!r} + '(): param ' + repr(p.name) + "
+                "' needs a default'\n"
                 "    )\n"
             )
         elif not self.allow_defaults:
             lines.append(
                 "for p in sig.parameters.values():\n"
                 "    assert p.default is inspect.Parameter.empty, (\n"
-                f"        f'{fn}(): param {{p.name!r}} must have no default'\n"
+                f"        {fn!r} + '(): param ' + repr(p.name) + "
+                "' must have no default'\n"
                 "    )\n"
             )
         if self.param_annotations:
@@ -91,9 +95,9 @@ class SignatureCheck(Check):
                 lines.append(
                     f"assert sig.parameters[{pname!r}].annotation is "
                     f"{annot}, (\n"
-                    f"    f'{fn}({pname}): annotation must be "
-                    f"{annot}, got '\n"
-                    f"    f'{{sig.parameters[{pname!r}].annotation!r}}'\n"
+                    f"    {fn!r} + '({pname}): annotation must be "
+                    f"{annot}, got ' + "
+                    f"repr(sig.parameters[{pname!r}].annotation)\n"
                     ")\n"
                 )
         if self.return_annotation is not None:
@@ -101,15 +105,15 @@ class SignatureCheck(Check):
             if ann == "None":
                 lines.append(
                     "assert sig.return_annotation is None, (\n"
-                    f"    f'{fn}(): return must be None, got '\n"
-                    "    f'{sig.return_annotation!r}'\n"
+                    f"    {fn!r} + '(): return must be None, got ' + "
+                    "repr(sig.return_annotation)\n"
                     ")\n"
                 )
             else:
                 lines.append(
                     f"assert sig.return_annotation is {ann}, (\n"
-                    f"    f'{fn}(): return must be {ann}, got '\n"
-                    "    f'{sig.return_annotation!r}'\n"
+                    f"    {fn!r} + '(): return must be {ann}, got ' + "
+                    "repr(sig.return_annotation)\n"
                     ")\n"
                 )
         lines.append("print('OK')\n")
@@ -157,14 +161,16 @@ class MethodSignatureCheck(Check):
             "got = list(sig.parameters)\n"
             f"expected = {list(self.expected_params)!r}\n"
             "assert got == expected, (\n"
-            f"    f'{target}: got={{got!r}} expected={{expected!r}}'\n"
+            f"    {target!r} + ': got=' + repr(got) + "
+            "' expected=' + repr(expected)\n"
             ")\n"
         )
         if not self.allow_defaults:
             code += (
                 "for p in sig.parameters.values():\n"
                 "    assert p.default is inspect.Parameter.empty, (\n"
-                f"        f'{target}: param {{p.name!r}} must have no default'\n"
+                f"        {target!r} + ': param ' + repr(p.name) + "
+                "' must have no default'\n"
                 "    )\n"
             )
         code += "print('OK')\n"

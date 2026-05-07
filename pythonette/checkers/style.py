@@ -1,7 +1,18 @@
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+
+def _mypy_cache_dir() -> Path:
+    """Per-user cache so mypy doesn't re-parse typeshed on every run, while
+    keeping the student's working directory clean of .mypy_cache/."""
+    base = os.environ.get("XDG_CACHE_HOME")
+    root = Path(base) if base else Path.home() / ".cache"
+    cache = root / "pythonette" / "mypy"
+    cache.mkdir(parents=True, exist_ok=True)
+    return cache
 
 
 @dataclass(frozen=True)
@@ -31,7 +42,7 @@ def check_mypy(file: Path) -> StyleResult:
             "--no-error-summary",
             "--hide-error-context",
             "--show-error-codes",
-            "--cache-dir=/dev/null",
+            f"--cache-dir={_mypy_cache_dir()}",
             "--disallow-untyped-defs",
             "--disallow-incomplete-defs",
             "--check-untyped-defs",

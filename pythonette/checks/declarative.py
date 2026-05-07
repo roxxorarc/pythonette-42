@@ -433,7 +433,6 @@ class HasNestedClass(Assertion):
             f"assert any(\n"
             f"    _i.isclass(_i.getattr_static({self.class_}, _n, None))\n"
             f"    for _n in dir({self.class_})\n"
-            f"    if not _n.startswith('_')\n"
             f"), {msg!r}"
         )
 
