@@ -1,3 +1,5 @@
+"""Module 05 — Code Nexus: polymorphic data streams in the digital matrix."""
+
 from pythonette.checks import (
     AssertCheck,
     ClassMethodsCheck,

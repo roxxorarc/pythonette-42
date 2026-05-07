@@ -1,3 +1,5 @@
+"""Module 00 — Growing Code: Python fundamentals through garden data."""
+
 from pythonette.checks import (
     AuthorizedCheck,
     CallCheck,
@@ -7,6 +9,10 @@ from pythonette.checks import (
 )
 from pythonette.subjects.registry import Exercise, Module
 
+
+# ---------------------------------------------------------------------------
+# Exercise 0: ft_hello_garden
+# ---------------------------------------------------------------------------
 
 _EX0 = Exercise(
     module_id="00", id="ex0",
@@ -32,6 +38,10 @@ _EX0 = Exercise(
         "No prompts, no input — just one print."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 1: ft_garden_name
+# ---------------------------------------------------------------------------
 
 _EX1 = Exercise(
     module_id="00", id="ex1",
@@ -73,6 +83,10 @@ _EX1 = Exercise(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# Exercise 2: ft_plot_area
+# ---------------------------------------------------------------------------
+
 _EX2 = Exercise(
     module_id="00", id="ex2",
     filenames=("ft_plot_area.py",),
@@ -109,6 +123,10 @@ _EX2 = Exercise(
         "Output: 'Plot area: <length*width>'."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 3: ft_harvest_total
+# ---------------------------------------------------------------------------
 
 _EX3 = Exercise(
     module_id="00", id="ex3",
@@ -151,6 +169,10 @@ _EX3 = Exercise(
         "Final: 'Total harvest: <sum>'."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 4: ft_plant_age
+# ---------------------------------------------------------------------------
 
 _EX4 = Exercise(
     module_id="00", id="ex4",
@@ -202,6 +224,10 @@ _EX4 = Exercise(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# Exercise 5: ft_water_reminder
+# ---------------------------------------------------------------------------
+
 _EX5 = Exercise(
     module_id="00", id="ex5",
     filenames=("ft_water_reminder.py",),
@@ -246,6 +272,10 @@ _EX5 = Exercise(
     ),
     explain="Strictly >2 → water. Exactly 2 → fine.",
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 6: ft_count_harvest (iterative + recursive)
+# ---------------------------------------------------------------------------
 
 _EX6 = Exercise(
     module_id="00", id="ex6",
@@ -336,6 +366,10 @@ _EX6 = Exercise(
         "Recursive: helpers / default args / nested function all allowed."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 7: ft_seed_inventory
+# ---------------------------------------------------------------------------
 
 _EX7 = Exercise(
     module_id="00", id="ex7",

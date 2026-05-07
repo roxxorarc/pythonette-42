@@ -1,3 +1,5 @@
+"""Module 03 — Data Quest: mastering Python collections."""
+
 from pythonette.checks import (
     AssertCheck,
     AuthorizedCheck,
@@ -12,6 +14,10 @@ from pythonette.checks import (
 )
 from pythonette.subjects.registry import Exercise, Module
 
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
 
 def _struct(
     file: str,
@@ -60,6 +66,10 @@ def _script_contains(
     )
 
 
+# ---------------------------------------------------------------------------
+# Exercise 0: ft_command_quest
+# ---------------------------------------------------------------------------
+
 _EX0_FILE = "ft_command_quest.py"
 
 _EX0 = Exercise(
@@ -88,6 +98,10 @@ _EX0 = Exercise(
         "1-based index, plus the total argv length."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 1: ft_score_analytics
+# ---------------------------------------------------------------------------
 
 _EX1_FILE = "ft_score_analytics.py"
 _EX1_FIVE = (
@@ -142,6 +156,10 @@ _EX1 = Exercise(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# Exercise 2: ft_coordinate_system
+# ---------------------------------------------------------------------------
+
 _EX2_FILE = "ft_coordinate_system.py"
 # (3,4,0) -> distance to center = 5.0 ; distance to (4,5,6) = sqrt(38).
 _EX2_STDIN_OK = "3,4,0\n4,5,6\n"
@@ -188,6 +206,10 @@ _EX2 = Exercise(
         "(rounded to 4 decimals) to (0,0,0) and between two points."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 3: ft_achievement_tracker
+# ---------------------------------------------------------------------------
 
 _EX3_FILE = "ft_achievement_tracker.py"
 
@@ -257,6 +279,10 @@ _EX3 = Exercise(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# Exercise 4: ft_inventory_system
+# ---------------------------------------------------------------------------
+
 _EX4_FILE = "ft_inventory_system.py"
 _EX4_ARGV = (
     _EX4_FILE,
@@ -304,6 +330,10 @@ _EX4 = Exercise(
         "add a final new item via dict.update()."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 5: ft_data_stream
+# ---------------------------------------------------------------------------
 
 _EX5_FILE = "ft_data_stream.py"
 
@@ -381,6 +411,10 @@ _EX5 = Exercise(
         "element each step until empty."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 6: ft_data_alchemist
+# ---------------------------------------------------------------------------
 
 _EX6_FILE = "ft_data_alchemist.py"
 

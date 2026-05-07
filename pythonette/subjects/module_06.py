@@ -1,3 +1,5 @@
+"""Module 06 — The Codex: mastering Python's import mysteries."""
+
 from pythonette.checks import (
     AssertCheck,
     Contains,

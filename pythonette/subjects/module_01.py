@@ -1,3 +1,5 @@
+"""Module 01 — Code Cultivation: object-oriented garden systems."""
+
 from pythonette.checks import (
     AssertCheck,
     AuthorizedCheck,
@@ -17,6 +19,10 @@ from pythonette.checks import (
 )
 from pythonette.subjects.registry import Exercise, Module
 
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
 
 def _struct_oop(
     file: str,
@@ -41,6 +47,10 @@ def _struct_oop(
         label=label,
     )
 
+
+# ---------------------------------------------------------------------------
+# Exercise 0: ft_garden_intro
+# ---------------------------------------------------------------------------
 
 _EX0 = Exercise(
     module_id="01", id="ex0",
@@ -74,6 +84,10 @@ _EX0 = Exercise(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# Exercise 1: ft_garden_data
+# ---------------------------------------------------------------------------
+
 _EX1 = Exercise(
     module_id="01", id="ex1",
     filenames=("ft_garden_data.py",),
@@ -105,6 +119,10 @@ _EX1 = Exercise(
         "'Garden Plant Registry' banner."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 2: ft_plant_growth
+# ---------------------------------------------------------------------------
 
 _EX2 = Exercise(
     module_id="01", id="ex2",
@@ -144,6 +162,10 @@ _EX2 = Exercise(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# Exercise 3: ft_plant_factory
+# ---------------------------------------------------------------------------
+
 _EX3 = Exercise(
     module_id="01", id="ex3",
     filenames=("ft_plant_factory.py",),
@@ -180,6 +202,10 @@ _EX3 = Exercise(
         "at least 5 distinct plants directly via the constructor."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 4: ft_garden_security
+# ---------------------------------------------------------------------------
 
 _EX4 = Exercise(
     module_id="01", id="ex4",
@@ -234,6 +260,10 @@ _EX4 = Exercise(
         "message; previous value preserved."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 5: ft_plant_types
+# ---------------------------------------------------------------------------
 
 _EX5 = Exercise(
     module_id="01", id="ex5",
@@ -332,6 +362,10 @@ _EX5 = Exercise(
         "overrides show()."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 6: ft_garden_analytics
+# ---------------------------------------------------------------------------
 
 _EX6 = Exercise(
     module_id="01", id="ex6",

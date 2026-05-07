@@ -1,3 +1,5 @@
+"""Module 02 — Garden Guardian: data engineering for smart agriculture."""
+
 from pythonette.checks import (
     AssertCheck,
     AuthorizedCheck,
@@ -15,6 +17,10 @@ from pythonette.checks import (
 )
 from pythonette.subjects.registry import Exercise, Module
 
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
 
 def _struct_pipeline(
     file: str,
@@ -39,7 +45,9 @@ def _struct_pipeline(
     )
 
 
-
+# ---------------------------------------------------------------------------
+# Exercise 0: ft_first_exception
+# ---------------------------------------------------------------------------
 
 _EX0 = Exercise(
     module_id="02", id="ex0",
@@ -107,6 +115,10 @@ _EX0 = Exercise(
         "cases inside try/except, prints the error, keeps going."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 1: ft_raise_exception
+# ---------------------------------------------------------------------------
 
 _EX1 = Exercise(
     module_id="02", id="ex1",
@@ -179,6 +191,10 @@ _EX1 = Exercise(
         "inclusive. Out-of-range values raise an exception."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 2: ft_different_errors
+# ---------------------------------------------------------------------------
 
 _EX2 = Exercise(
     module_id="02", id="ex2",
@@ -285,6 +301,10 @@ _EX2 = Exercise(
     ),
 )
 
+# ---------------------------------------------------------------------------
+# Exercise 3: ft_custom_errors
+# ---------------------------------------------------------------------------
+
 _EX3 = Exercise(
     module_id="02", id="ex3",
     filenames=("ft_custom_errors.py",),
@@ -372,6 +392,10 @@ _EX3 = Exercise(
         "default message. Catching GardenError catches all subclasses."
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Exercise 4: ft_finally_block
+# ---------------------------------------------------------------------------
 
 _EX4 = Exercise(
     module_id="02", id="ex4",

@@ -1,3 +1,5 @@
+"""Module 04 — Data Archivist: digital preservation in the cyber archives."""
+
 from pythonette.checks import (
     AssertCheck,
     AuthorizedCheck,

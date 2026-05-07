@@ -1,3 +1,5 @@
+"""Module 07 — DataDeck: abstract card architecture."""
+
 from pythonette.checks import (
     AssertCheck,
     Eq,
