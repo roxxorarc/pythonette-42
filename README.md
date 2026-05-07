@@ -65,20 +65,31 @@ my_42_python/
 
 For each detected exercise:
 
-1. **Norme** — `flake8` on every file. Failures are listed
-   inline but do not stop the rest of the checks.
-2. **Execution** — every `TestCase` for that exercise is run in an
-   isolated temp directory (the student file is copied, nothing is
-   written next to your code).
-3. **Output** — stdout is matched against `expected_stdout` (exact)
-   or `expected_contains` (substring list). Non-zero exit codes and
-   timeouts (default 5s, treated as possible infinite loops) are
-   reported.
+1. **Style** — `flake8` and `mypy` (strict) run on every file in the
+   exercise. Failures are listed inline but do not stop the rest of the
+   checks. The mypy cache lives under `~/.cache/pythonette/mypy/` so
+   warm runs are an order of magnitude faster than cold ones.
+2. **Static checks** — AST-only assertions (`StructureCheck`,
+   `AuthorizedCheck`, `ImportCheck`, …) verify structure without
+   executing the student code.
+3. **Runtime checks** — the student files are copied into a temp dir,
+   then a generated harness imports/calls/runs them in a subprocess.
+   Used for `SignatureCheck`, `AssertCheck`, `RunCheck`, `ScriptCheck`,
+   etc. Default timeout: 5 seconds (treated as a possible infinite
+   loop).
+4. **Output matching** — stdout is matched against `expected_stdout`
+   (exact) or `expected_contains` / `stdout_contains` (substring list).
+   Non-zero exit codes and tracebacks surface as the failure reason.
+
+The framework exposes a typed `Assertion` DSL (`Eq`, `IsInstance`,
+`Raises`, `Prints`, `HasStaticMethod`, `FileWritten`, …) so test
+authors declare *what* to verify rather than hand-writing harness code.
 
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add test cases,
-exercises, and new modules.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the architecture, the full
+check toolbox, and a worked example of adding an exercise or a new
+module.
 
 ## 📄 License
