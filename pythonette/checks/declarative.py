@@ -310,6 +310,177 @@ class Exec(Assertion):
 
 
 @dataclass(frozen=True)
+class Prints(Assertion):
+    """Run ``statement`` while capturing its stdout, then assert each
+    substring is present in the captured output. Hides the
+    ``io.StringIO``/``redirect_stdout`` boilerplate from the test author.
+
+    Set ``case_insensitive=True`` to lowercase both the captured output
+    and the expected substrings before matching.
+    """
+
+    statement: str
+    contains: tuple[str, ...] = ()
+    case_insensitive: bool = False
+    message: str | None = None
+
+    def to_code(self) -> str:
+        if self.case_insensitive:
+            haystack = "_printed.lower()"
+            needles = tuple(s.lower() for s in self.contains)
+        else:
+            haystack = "_printed"
+            needles = self.contains
+        msg = self.message or (
+            f"{self.statement!r} did not print expected output"
+        )
+        return (
+            "import io as _io\n"
+            "from contextlib import redirect_stdout as _ro\n"
+            "_buf = _io.StringIO()\n"
+            "with _ro(_buf):\n"
+            f"    {self.statement}\n"
+            "_printed = _buf.getvalue()\n"
+            f"for _needle in {list(needles)!r}:\n"
+            f"    assert _needle in {haystack}, (\n"
+            f"        {msg!r} + ': missing ' + repr(_needle) + "
+            f"' in ' + repr(_printed)\n"
+            "    )"
+        )
+
+
+@dataclass(frozen=True)
+class HasStaticMethod(Assertion):
+    """``class_`` must declare at least one ``@staticmethod`` (any name)."""
+
+    class_: str
+    message: str | None = None
+
+    def to_code(self) -> str:
+        msg = self.message or f"no @staticmethod on {self.class_}"
+        return (
+            "import inspect as _i\n"
+            f"assert any(\n"
+            f"    isinstance(_i.getattr_static({self.class_}, _n), "
+            f"staticmethod)\n"
+            f"    for _n in dir({self.class_})\n"
+            f"    if not _n.startswith('_')\n"
+            f"), {msg!r}"
+        )
+
+
+@dataclass(frozen=True)
+class HasClassMethod(Assertion):
+    """``class_`` must declare at least one ``@classmethod`` (any name).
+
+    Set ``callable_no_args=True`` to additionally require that one such
+    classmethod can be invoked with no arguments — used to assert
+    'anonymous-constructor' helpers.
+    """
+
+    class_: str
+    callable_no_args: bool = False
+    message: str | None = None
+
+    def to_code(self) -> str:
+        if self.callable_no_args:
+            msg = self.message or (
+                f"no @classmethod on {self.class_} callable with no "
+                f"arguments"
+            )
+            return (
+                "import inspect as _i\n"
+                f"_cms = [\n"
+                f"    _n for _n in dir({self.class_})\n"
+                f"    if not _n.startswith('_')\n"
+                f"    and isinstance(\n"
+                f"        _i.getattr_static({self.class_}, _n), classmethod\n"
+                f"    )\n"
+                f"]\n"
+                "_ok = False\n"
+                "for _name in _cms:\n"
+                "    try:\n"
+                f"        getattr({self.class_}, _name)()\n"
+                "        _ok = True\n"
+                "        break\n"
+                "    except TypeError:\n"
+                "        continue\n"
+                f"assert _ok, {msg!r}"
+            )
+        msg = self.message or f"no @classmethod on {self.class_}"
+        return (
+            "import inspect as _i\n"
+            f"assert any(\n"
+            f"    isinstance(_i.getattr_static({self.class_}, _n), "
+            f"classmethod)\n"
+            f"    for _n in dir({self.class_})\n"
+            f"    if not _n.startswith('_')\n"
+            f"), {msg!r}"
+        )
+
+
+@dataclass(frozen=True)
+class HasNestedClass(Assertion):
+    """``class_`` must declare at least one nested class (any name)."""
+
+    class_: str
+    message: str | None = None
+
+    def to_code(self) -> str:
+        msg = self.message or f"no nested class in {self.class_}"
+        return (
+            "import inspect as _i\n"
+            f"assert any(\n"
+            f"    _i.isclass(_i.getattr_static({self.class_}, _n, None))\n"
+            f"    for _n in dir({self.class_})\n"
+            f"    if not _n.startswith('_')\n"
+            f"), {msg!r}"
+        )
+
+
+@dataclass(frozen=True)
+class FileWritten(Assertion):
+    """A file at ``path`` must exist after setup, optionally containing
+    every substring in ``contains``. Hides the ``pathlib`` import and the
+    'maybe-doesn't-exist-yet' guard from the test author."""
+
+    path: str
+    contains: tuple[str, ...] = ()
+    line_suffix: str | None = None
+    message: str | None = None
+
+    def to_code(self) -> str:
+        exists_msg = self.message or f"expected {self.path} to be written"
+        lines: list[str] = [
+            "from pathlib import Path as _P",
+            f"_p = _P({self.path!r})",
+            f"assert _p.is_file(), {exists_msg!r}",
+            "_text = _p.read_text(encoding='utf-8')",
+        ]
+        for needle in self.contains:
+            lines.append(
+                f"assert {needle!r} in _text, (\n"
+                f"    'missing ' + repr({needle!r}) + ' in ' + "
+                f"{self.path!r} + ': ' + repr(_text)\n"
+                f")"
+            )
+        if self.line_suffix is not None:
+            suf_msg = (
+                f"every non-empty line in {self.path} must end with "
+                f"{self.line_suffix!r}"
+            )
+            lines.append(
+                "_lines = [_ln for _ln in _text.splitlines() if _ln]"
+            )
+            lines.append(
+                f"assert _lines and all(\n"
+                f"    _ln.endswith({self.line_suffix!r}) for _ln in _lines\n"
+                f"), {suf_msg!r}"
+            )
+        return "\n".join(lines)
+
+
+@dataclass(frozen=True)
 class AssertCheck(Check):
     """A declarative runtime check: setup + a list of typed assertions.
 

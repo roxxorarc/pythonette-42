@@ -1,11 +1,13 @@
 from pythonette.checks import (
     AssertCheck,
     ClassMethodsCheck,
+    ClassNamePresenceCheck,
     Eq,
     Exec,
     HasAttr,
     ImportCheck,
     IsInstance,
+    Prints,
     Raises,
     RunCheck,
     Subclass,
@@ -260,21 +262,16 @@ _EX1_ROUTING_CHECK = AssertCheck(
 
 _EX1_UNHANDLED_CHECK = AssertCheck(
     label="DataStream: unmatched element triggers an error message",
-    quiet=True,
     setup=(
-        "import io\n"
-        "from contextlib import redirect_stdout\n"
         "from data_stream import DataStream, NumericProcessor\n"
         "ds = DataStream()\n"
-        "ds.register_processor(NumericProcessor())\n"
-        "buf = io.StringIO()\n"
-        "with redirect_stdout(buf):\n"
-        "    ds.process_stream(['no-processor-for-me'])\n"
-        "out = buf.getvalue().lower()"
+        "ds.register_processor(NumericProcessor())"
     ),
     assertions=(
-        Truthy(
-            "'error' in out or \"can't\" in out or 'cannot' in out",
+        Prints(
+            "ds.process_stream(['no-processor-for-me'])",
+            contains=("error",),
+            case_insensitive=True,
             message="process_stream must report unhandled elements",
         ),
     ),
@@ -353,28 +350,11 @@ _EX2_PROTOCOL_CHECK = AssertCheck(
 )
 
 
-_EX2_PLUGINS_CHECK = AssertCheck(
+_EX2_PLUGINS_CHECK = ClassNamePresenceCheck(
     label="data_pipeline defines a CSV plugin and a JSON plugin class",
-    setup=(
-        "import ast\n"
-        "from pathlib import Path\n"
-        f"src = Path({_EX2_FILE!r}).read_text(encoding='utf-8')\n"
-        f"tree = ast.parse(src, filename={_EX2_FILE!r})\n"
-        "names = [\n"
-        "    n.name for n in ast.walk(tree)\n"
-        "    if isinstance(n, ast.ClassDef)\n"
-        "]"
-    ),
-    assertions=(
-        Truthy(
-            "any('csv' in n.lower() for n in names)",
-            message="expected a CSV plugin class",
-        ),
-        Truthy(
-            "any('json' in n.lower() for n in names)",
-            message="expected a JSON plugin class",
-        ),
-    ),
+    scope=(_EX2_FILE,),
+    must_contain=("csv", "json"),
+    reason="expected one CSV-like and one JSON-like plugin class name",
 )
 
 

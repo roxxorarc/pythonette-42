@@ -382,6 +382,49 @@ class RequireNodeTypesCheck(Check):
 
 
 @dataclass(frozen=True)
+class ClassNamePresenceCheck(Check):
+    """For each substring in ``must_contain``, require at least one
+    ``ClassDef`` in the scoped files whose name contains that substring
+    (case-insensitive). Useful for 'must define a CSV class and a JSON
+    class' constraints where the exact name is up to the student.
+
+    ``reason`` overrides the default failure message."""
+
+    label: str
+    scope: tuple[str, ...]
+    must_contain: tuple[str, ...]
+    reason: str | None = None
+
+    @property
+    def name(self) -> str:
+        return self.label
+
+    def run(
+        self, exercise_dir: Path, exercise: "Exercise"
+    ) -> CheckResult:
+        names: list[str] = []
+        for f in _iter_py_files(exercise_dir, self.scope):
+            tree, err = _parse_or_fail(self.name, f)
+            if err:
+                return err
+            for n in ast.walk(tree):  # type: ignore[arg-type]
+                if isinstance(n, ast.ClassDef):
+                    names.append(n.name)
+        lowered = [n.lower() for n in names]
+        missing = [
+            needle for needle in self.must_contain
+            if not any(needle.lower() in n for n in lowered)
+        ]
+        if missing:
+            base = self.reason or "missing class name(s) containing"
+            return CheckResult(
+                self.name, False,
+                f"{base}: {missing!r}; defined classes: {names!r}",
+            )
+        return CheckResult(self.name, True)
+
+
+@dataclass(frozen=True)
 class ImportStyleCheck(Check):
     """Assert that ``file`` uses the requested mix of import styles.
 

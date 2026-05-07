@@ -2,6 +2,9 @@ from pythonette.checks import (
     AssertCheck,
     AuthorizedCheck,
     HasAttr,
+    HasClassMethod,
+    HasNestedClass,
+    HasStaticMethod,
     IsNot,
     MethodArityCheck,
     MethodSignatureCheck,
@@ -350,44 +353,18 @@ _EX6 = Exercise(
         ),
         AssertCheck(
             label="Plant exposes a static and a class method",
-            setup=(
-                "import inspect\n"
-                "from ft_garden_analytics import Plant\n"
-                "names = [n for n in dir(Plant) if not n.startswith('_')]"
-            ),
+            setup="from ft_garden_analytics import Plant",
             assertions=(
-                Truthy(
-                    "any("
-                    "isinstance("
-                    "inspect.getattr_static(Plant, n), staticmethod"
-                    ") for n in names"
-                    ")",
-                    message="no @staticmethod on Plant",
-                ),
-                Truthy(
-                    "any("
-                    "isinstance("
-                    "inspect.getattr_static(Plant, n), classmethod"
-                    ") for n in names"
-                    ")",
-                    message="no @classmethod on Plant",
-                ),
+                HasStaticMethod("Plant"),
+                HasClassMethod("Plant"),
             ),
         ),
         AssertCheck(
             label="Plant has a nested class for stats",
-            setup=(
-                "import inspect\n"
-                "from ft_garden_analytics import Plant"
-            ),
+            setup="from ft_garden_analytics import Plant",
             assertions=(
-                Truthy(
-                    "any("
-                    "inspect.isclass("
-                    "inspect.getattr_static(Plant, n, None)"
-                    ") for n in dir(Plant)"
-                    ")",
-                    message="no nested class in Plant for stats",
+                HasNestedClass(
+                    "Plant", message="no nested class in Plant for stats",
                 ),
             ),
         ),
@@ -426,28 +403,11 @@ _EX6 = Exercise(
         AssertCheck(
             label="Plant has a classmethod callable with no args (anonymous)",
             quiet=True,
-            setup=(
-                "import inspect\n"
-                "from ft_garden_analytics import Plant\n"
-                "cms = [\n"
-                "    n for n in dir(Plant)\n"
-                "    if not n.startswith('_')\n"
-                "    and isinstance(\n"
-                "        inspect.getattr_static(Plant, n), classmethod\n"
-                "    )\n"
-                "]\n"
-                "ok = False\n"
-                "for _name in cms:\n"
-                "    try:\n"
-                "        getattr(Plant, _name)()\n"
-                "        ok = True\n"
-                "        break\n"
-                "    except TypeError:\n"
-                "        continue"
-            ),
+            setup="from ft_garden_analytics import Plant",
             assertions=(
-                Truthy(
-                    "ok",
+                HasClassMethod(
+                    "Plant",
+                    callable_no_args=True,
                     message=(
                         "no @classmethod on Plant callable with no "
                         "arguments (anonymous)"

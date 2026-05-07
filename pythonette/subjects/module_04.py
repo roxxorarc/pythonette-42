@@ -3,6 +3,7 @@ from pythonette.checks import (
     AuthorizedCheck,
     Eq,
     Exec,
+    FileWritten,
     IsInstance,
     NoForbiddenCallsCheck,
     NoNodeTypesCheck,
@@ -175,25 +176,8 @@ _EX1 = Exercise(
             stdin="new_fragment.txt\n",
             fixtures=_EX1_FIXTURES,
             stdout_contains=("new_fragment.txt",),
-            post_setup=(
-                "from pathlib import Path\n"
-                "saved = Path('new_fragment.txt').read_text("
-                "encoding='utf-8') if "
-                "Path('new_fragment.txt').is_file() else ''\n"
-                "saved_lines = [ln for ln in saved.splitlines() if ln]"
-            ),
             post_assertions=(
-                Truthy(
-                    "Path('new_fragment.txt').is_file()",
-                    message="expected new_fragment.txt to be written",
-                ),
-                Truthy(
-                    "saved_lines and all("
-                    "ln.endswith('#') for ln in saved_lines)",
-                    message=(
-                        "saved file must have every line ending with #"
-                    ),
-                ),
+                FileWritten("new_fragment.txt", line_suffix="#"),
             ),
         ),
     ),
