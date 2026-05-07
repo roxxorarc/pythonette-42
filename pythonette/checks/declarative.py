@@ -71,12 +71,13 @@ class Eq(Assertion):
     value: object
 
     def to_code(self) -> str:
-        expr_lit = repr(self.expr)
         return (
             f"_v = ({self.expr})\n"
             f"_want = {self.value!r}\n"
-            f"assert _v == _want, "
-            f"f'{{{expr_lit}}} == {{_v!r}}, expected {{_want!r}}'"
+            f"assert _v == _want, (\n"
+            f"    {self.expr!r} + ' == ' + repr(_v) + "
+            f"', expected ' + repr(_want)\n"
+            f")"
         )
 
 
@@ -88,12 +89,13 @@ class Contains(Assertion):
     substring: object
 
     def to_code(self) -> str:
-        expr_lit = repr(self.expr)
         return (
             f"_v = ({self.expr})\n"
             f"_needle = {self.substring!r}\n"
-            f"assert _needle in _v, "
-            f"f'{{_needle!r}} not in {{{expr_lit}}} == {{_v!r}}'"
+            f"assert _needle in _v, (\n"
+            f"    repr(_needle) + ' not in ' + {self.expr!r} + "
+            f"' == ' + repr(_v)\n"
+            f")"
         )
 
 
@@ -105,13 +107,12 @@ class ContainsAll(Assertion):
     substrings: tuple[object, ...]
 
     def to_code(self) -> str:
-        expr_lit = repr(self.expr)
         return (
             f"_v = ({self.expr})\n"
             f"for _needle in {list(self.substrings)!r}:\n"
             f"    assert _needle in _v, (\n"
-            f"        f'{{{expr_lit}}}: missing "
-            f"{{_needle!r}} in {{_v!r}}'\n"
+            f"        {self.expr!r} + ': missing ' + "
+            f"repr(_needle) + ' in ' + repr(_v)\n"
             f"    )"
         )
 
@@ -152,13 +153,12 @@ class IsInstance(Assertion):
     type_: str
 
     def to_code(self) -> str:
-        expr_lit = repr(self.expr)
-        type_lit = repr(self.type_)
         return (
             f"_v = ({self.expr})\n"
-            f"assert isinstance(_v, {self.type_}), "
-            f"f'{{{expr_lit}}}: expected {{{type_lit}}}, "
-            f"got {{type(_v).__name__}}'"
+            f"assert isinstance(_v, {self.type_}), (\n"
+            f"    {self.expr!r} + ': expected ' + {self.type_!r} + "
+            f"', got ' + type(_v).__name__\n"
+            f")"
         )
 
 
