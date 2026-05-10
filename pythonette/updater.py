@@ -93,6 +93,56 @@ def update(force: bool = False) -> int:
     return 0
 
 
+def check_and_prompt() -> None:
+    """Best-effort: fetch origin and, if the current branch is behind,
+    prompt the user to install. Stays silent on any failure (no git,
+    no network, detached HEAD, not a checkout, non-interactive stdin)."""
+    try:
+        repo_root = _find_repo_root(Path(__file__).resolve())
+        if repo_root is None:
+            return
+        branch = _current_branch(repo_root)
+        if branch is None:
+            return
+        fetch = subprocess.run(
+            ["git", "-C", str(repo_root), "fetch", "--quiet", "origin", branch],
+            capture_output=True, text=True, timeout=3,
+        )
+        if fetch.returncode != 0:
+            return
+        incoming = _commits_between(repo_root, "HEAD", f"origin/{branch}")
+    except (subprocess.TimeoutExpired, OSError):
+        return
+    if not incoming:
+        return
+
+    body = Text()
+    body.append(
+        f"{len(incoming)} new commit(s) on origin/{branch}:\n\n"
+    )
+    for sha, subject in incoming[:5]:
+        body.append(f"  {sha}", style="yellow")
+        body.append(f"  {subject}\n")
+    if len(incoming) > 5:
+        body.append(f"  ... and {len(incoming) - 5} more\n", style="dim")
+    console.print(
+        Panel(body, title="pythonette update available", border_style="cyan")
+    )
+
+    if not sys.stdin.isatty():
+        console.print(
+            "[dim]run [bold]pythonette -u[/bold] to install.[/dim]"
+        )
+        return
+    try:
+        answer = input("Install now? [y/N] ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        console.print()
+        return
+    if answer in ("y", "yes"):
+        update()
+
+
 def _full_reinstall(repo_root: Path) -> int:
     install_sh = repo_root / "install.sh"
     if not install_sh.is_file():

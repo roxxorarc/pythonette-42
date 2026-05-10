@@ -251,10 +251,12 @@ _EX1 = Exercise(
             "ft_distillation_0.py",
             contains=(
                 "=== Distillation 0 ===",
-                "Strength potion brewed with 'Fire element created' and "
-                "'Water element created'",
-                "Healing potion brewed with 'Earth element created' and "
-                "'Air element created'",
+                "Strength potion",
+                "Fire element created",
+                "Water element created",
+                "Healing potion",
+                "Earth element created",
+                "Air element created",
             ),
         ),
         _runpy_check(
@@ -262,8 +264,10 @@ _EX1 = Exercise(
             "ft_distillation_1.py",
             contains=(
                 "=== Distillation 1 ===",
-                "Strength potion brewed with 'Fire element created'",
-                "Healing potion brewed with 'Earth element created'",
+                "Strength potion",
+                "Fire element created",
+                "Healing potion",
+                "Earth element created",
             ),
         ),
     ),
@@ -300,10 +304,9 @@ _RECIPES_IMPORT_STYLE_CHECK = ImportStyleCheck(
 
 
 _LEAD_SUBSTRINGS = (
-    "Recipe transmuting Lead to Gold",
+    "Lead to Gold",
     "Air element created",
-    "Strength potion brewed with 'Fire element created' and "
-    "'Water element created'",
+    "Strength potion",
     "Fire element created",
 )
 

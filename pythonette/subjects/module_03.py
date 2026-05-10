@@ -356,8 +356,7 @@ _EX5 = Exercise(
             label="gen_event and consume_event are generator functions",
             setup=(
                 "import inspect\n"
-                "from ft_data_stream import gen_event, consume_event\n"
-                "ev = next(gen_event())"
+                "from ft_data_stream import gen_event, consume_event"
             ),
             assertions=(
                 Truthy(
@@ -373,20 +372,23 @@ _EX5 = Exercise(
                         "(use yield)"
                     ),
                 ),
-                IsInstance("ev", "tuple"),
-                Eq("len(ev)", 2),
+                IsInstance("next(gen_event())", "tuple"),
+                Eq("len(next(gen_event()))", 2),
             ),
         ),
         AssertCheck(
             label="consume_event drains the input list to empty",
-            setup=(
-                "from ft_data_stream import consume_event\n"
-                "data = [('a', 'x'), ('b', 'y'), ('c', 'z')]\n"
-                "seen = [ev for ev in consume_event(data)]"
-            ),
+            setup="from ft_data_stream import consume_event",
             assertions=(
-                Eq("len(seen)", 3),
-                Eq("data", []),
+                Truthy(
+                    "len(list(consume_event("
+                    "_d := [('a', 'x'), ('b', 'y'), ('c', 'z')]"
+                    "))) == 3 and _d == []",
+                    message=(
+                        "consume_event must yield every event and drain "
+                        "the input list to empty"
+                    ),
+                ),
             ),
         ),
         _script_contains(

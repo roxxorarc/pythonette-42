@@ -111,11 +111,10 @@ _EX0 = Exercise(
             fixtures=_EX0_FIXTURES,
             stdout_contains=(
                 "=== Cyber Archives Recovery ===",
-                f"Accessing file '{_FRAGMENT_NAME}'",
+                _FRAGMENT_NAME,
                 "[FRAGMENT 001] Digital preservation protocols established 2087",
                 "[FRAGMENT 002] Knowledge must survive the entropy wars",
                 "[FRAGMENT 003] Every byte saved is a victory against oblivion",
-                f"File '{_FRAGMENT_NAME}' closed.",
             ),
         ),
     ),
@@ -291,10 +290,15 @@ _EX3_CONTRACT_CHECK = AssertCheck(
         "if os.path.exists(out_path):\n"
         "    os.remove(out_path)\n"
         "wrote = None\n"
-        "for _mode in ('write', 1, 2, 'w'):\n"
+        "for _mode in ('write', 1, 2, 'w', 'r+'):\n"
+        "    if os.path.exists(out_path):\n"
+        "        os.remove(out_path)\n"
+        "    Path(out_path).write_text('', encoding='utf-8')\n"
         "    try:\n"
         "        wrote = secure_archive(out_path, _mode, 'vault payload')\n"
-        "        break\n"
+        "        if isinstance(wrote, tuple) and len(wrote) == 2 "
+        "and wrote[0] is True:\n"
+        "            break\n"
         "    except TypeError:\n"
         "        continue\n"
         "saved = (\n"

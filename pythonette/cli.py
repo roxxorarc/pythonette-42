@@ -81,6 +81,10 @@ def main(argv: list[str] | None = None) -> int:
 
         return update(force=args.force)
 
+    from pythonette.updater import check_and_prompt
+
+    check_and_prompt()
+
     from pythonette.runner import run
 
     return run(args)
